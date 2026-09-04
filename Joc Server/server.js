@@ -6,7 +6,7 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 // Setază o cheie secretă pentru resetare
-const ADMIN_SECRET_KEY = 'SECRET_TA';
+const ADMIN_SECRET_KEY = 'reseteaza123';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
