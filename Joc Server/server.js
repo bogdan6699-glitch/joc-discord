@@ -9,7 +9,7 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname)));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Conectare Supabase folosind Service Role sau Anon Key
+// Conectare Supabase
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
 function getSaptamanaCurenta() {
@@ -63,7 +63,6 @@ app.get('/auth/discord/callback', async (req, res) => {
     });
 
     const userData = userResponse.data;
-    // Trimitem datele catre frontend prin parametru URL
     res.redirect(`/?discord_id=${userData.id}&username=${encodeURIComponent(userData.username)}`);
   } catch (error) {
     console.error("Eroare OAuth:", error.response ? error.response.data : error.message);
@@ -90,6 +89,27 @@ app.get('/api/jucator/:id', async (req, res) => {
   }
 
   res.json({ success: true, jucator });
+});
+
+// Clasament Top 10 Săptămânal
+app.get('/api/leaderboard', async (req, res) => {
+  const saptamana = getSaptamanaCurenta();
+
+  try {
+    const { data: topJucatori, error } = await supabase
+      .from('jucatori')
+      .select('nume_discord, scor_total')
+      .eq('saptamana_curenta', saptamana)
+      .order('scor_total', { ascending: false })
+      .limit(10);
+
+    if (error) throw error;
+
+    res.json({ success: true, leaderboard: topJucatori || [] });
+  } catch (err) {
+    console.error("Eroare clasament:", err);
+    res.status(500).json({ success: false, message: "Eroare clasament." });
+  }
 });
 
 // Salvare Scor
