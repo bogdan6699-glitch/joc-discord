@@ -234,18 +234,17 @@
 
     let isPlaying = false;
     let currentScore = 0;
-    let gameSpeed = 4.5;
+    let gameSpeed = 1.5;
     let gameLoopId;
 
-    // Player State
     const player = {
       x: 60,
-      y: 155,
+      y: 154,
       width: 26,
       height: 26,
       dy: 0,
-      gravity: 0.58,
-      jumpPower: -9.8,
+      gravity: 0.45,
+      jumpPower: -8.5,
       jumpsLeft: 2,
       hasShield: false,
       slowMoTimer: 0
@@ -284,7 +283,6 @@
     }
 
     function drawPlayer() {
-      // Trail
       playerTrail.push({ x: player.x, y: player.y });
       if (playerTrail.length > 6) playerTrail.shift();
 
@@ -293,7 +291,6 @@
         ctx.fillRect(t.x, t.y, player.width, player.height);
       });
 
-      // Shield Aura
       if (player.hasShield) {
         ctx.strokeStyle = '#00ff88';
         ctx.lineWidth = 3;
@@ -302,26 +299,21 @@
         ctx.stroke();
       }
 
-      // Player Body
       ctx.fillStyle = player.slowMoTimer > 0 ? '#00bfff' : '#00fff5';
       ctx.fillRect(player.x, player.y, player.width, player.height);
     }
 
     function spawnObstacles() {
       obstacleTimer++;
-      let effectiveSpeed = player.slowMoTimer > 0 ? gameSpeed * 0.6 : gameSpeed;
-      let interval = Math.max(40, 90 - Math.floor(currentScore / 35));
+      let interval = Math.max(50, 130 - Math.floor(currentScore / 25));
 
       if (obstacleTimer > interval) {
         const rand = Math.random();
         if (rand < 0.4) {
-          // Obstacol Sol Mic
           obstacles.push({ x: canvas.width, y: 155, width: 20, height: 25, color: '#ff0055', type: 'ground' });
         } else if (rand < 0.7) {
-          // Obstacol Sol Inalt
           obstacles.push({ x: canvas.width, y: 140, width: 28, height: 40, color: '#ff5500', type: 'ground_high' });
         } else {
-          // Drona Aeriana (necesita trecere pe dedesubt sau dubla saritura peste)
           obstacles.push({ x: canvas.width, y: 95, width: 35, height: 18, color: '#ff00aa', type: 'air' });
         }
         obstacleTimer = 0;
@@ -330,7 +322,7 @@
 
     function spawnItems() {
       itemTimer++;
-      if (itemTimer > 180) {
+      if (itemTimer > 200) {
         const rand = Math.random();
         let itemType = 'coin';
         let color = '#ffd700';
@@ -355,7 +347,6 @@
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Linia Solului
       ctx.strokeStyle = '#22224d';
       ctx.lineWidth = 2;
       ctx.beginPath();
@@ -363,11 +354,9 @@
       ctx.lineTo(canvas.width, 180);
       ctx.stroke();
 
-      // Slow Motion Logic
       if (player.slowMoTimer > 0) player.slowMoTimer--;
       let currentSpeed = player.slowMoTimer > 0 ? gameSpeed * 0.6 : gameSpeed;
 
-      // Player Physics
       player.dy += player.gravity;
       player.y += player.dy;
 
@@ -377,12 +366,11 @@
         player.jumpsLeft = 2;
       }
 
-      gameSpeed = 4.5 + (currentScore / 90);
+      gameSpeed = 1.5 + (currentScore / 250);
 
       spawnObstacles();
       spawnItems();
 
-      // Obstacole
       for (let i = obstacles.length - 1; i >= 0; i--) {
         let obs = obstacles[i];
         obs.x -= currentSpeed;
@@ -390,7 +378,6 @@
         ctx.fillStyle = obs.color;
         ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
 
-        // Coliziune Player - Obstacol
         if (
           player.x < obs.x + obs.width &&
           player.x + player.width > obs.x &&
@@ -414,7 +401,6 @@
         }
       }
 
-      // Item-uri
       for (let i = items.length - 1; i >= 0; i--) {
         let item = items[i];
         item.x -= currentSpeed;
@@ -424,7 +410,6 @@
         ctx.arc(item.x + 8, item.y + 8, 8, 0, Math.PI * 2);
         ctx.fill();
 
-        // Colectare Item
         if (
           player.x < item.x + item.width &&
           player.x + player.width > item.x &&
@@ -444,7 +429,6 @@
       updateParticles();
       drawPlayer();
 
-      // UI Text
       ctx.fillStyle = '#ffffff';
       ctx.font = '14px Arial';
       ctx.fillText(`Scor: ${currentScore}`, 12, 22);
@@ -463,7 +447,7 @@
       document.getElementById('status-message').innerText = "";
       isPlaying = true;
       currentScore = 0;
-      gameSpeed = 4.5;
+      gameSpeed = 1.5;
       obstacles = [];
       items = [];
       particles = [];
