@@ -79,12 +79,10 @@
     <h1>Cyber-Runner</h1>
     <p>Conectează-te cu Discord și acumulează cel mai mare scor!</p>
 
-    <!-- Secțiune Autentificare -->
     <div id="auth-section">
       <a href="/login-discord" class="btn-login">Conectează-te cu Discord</a>
     </div>
 
-    <!-- Secțiune Joc (Ascunsă până la login) -->
     <div id="game-section" style="display: none;">
       <h3>Salut, <span id="username-display" style="color: #00fff5;">Jucător</span>!</h3>
       <p style="font-size: 14px; color: #aaa;">Apasă <strong>SPACE</strong> sau <strong>CLICK</strong> pe joc pentru a sări peste obstacole.</p>
@@ -104,7 +102,6 @@
     let userDiscordId = null;
     let userDiscordName = null;
 
-    // 1. Verificăm dacă utilizatorul este logat
     async function checkAuth() {
       try {
         const res = await fetch('/api/user-curent');
@@ -118,7 +115,6 @@
           document.getElementById('game-section').style.display = 'block';
           document.getElementById('username-display').innerText = userDiscordName;
 
-          // Încărcăm datele jucătorului
           incarcaStatistici();
         }
       } catch (err) {
@@ -126,7 +122,6 @@
       }
     }
 
-    // 2. Extrage scorul curent din baza de date
     async function incarcaStatistici() {
       try {
         const res = await fetch(`/api/jucator/${userDiscordId}`);
@@ -140,7 +135,6 @@
       }
     }
 
-    // --- MOTORUL JOCULUI CYBER-RUNNER ---
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
 
@@ -167,7 +161,6 @@
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Fizică jucător
       player.dy += player.gravity;
       player.y += player.dy;
 
@@ -177,14 +170,12 @@
         player.isGrounded = true;
       }
 
-      // Generare obstacole
       obstacleTimer++;
       if (obstacleTimer > 90) {
         obstacles.push({ x: canvas.width, y: 145, width: 20, height: 25 });
         obstacleTimer = 0;
       }
 
-      // Mișcare obstacole & Coliziune
       for (let i = 0; i < obstacles.length; i++) {
         obstacles[i].x -= 5;
 
@@ -199,7 +190,6 @@
         }
       }
 
-      // Scor & curățare obstacole
       if (obstacles.length > 0 && obstacles[0].x < -20) {
         obstacles.shift();
         currentScore += 10;
@@ -208,10 +198,9 @@
       drawPlayer();
       drawObstacles();
 
-      // Afișare scor în joc
       ctx.fillStyle = '#ffffff';
       ctx.font = '16px Arial';
-      ctx.fillText(`Scor Ründa: ${currentScore}`, 10, 25);
+      ctx.fillText(`Scor Runda: ${currentScore}`, 10, 25);
 
       gameLoopId = requestAnimationFrame(updateGame);
     }
@@ -234,7 +223,6 @@
       ctx.font = '24px Arial';
       ctx.fillText(`GAME OVER! Scor: ${currentScore}`, 170, 100);
 
-      // Trimitere scor la Server / Supabase
       const statusDiv = document.getElementById('status-message');
       statusDiv.innerText = "Se salvează scorul...";
 
@@ -266,7 +254,6 @@
       }
     }
 
-    // Controale
     function handleJump() {
       if (!isPlaying) {
         startGame();
@@ -284,8 +271,6 @@
     });
 
     canvas.addEventListener('click', handleJump);
-
-    // Inițializare
     checkAuth();
   </script>
 </body>
