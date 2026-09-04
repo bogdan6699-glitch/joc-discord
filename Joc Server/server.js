@@ -9,7 +9,6 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname)));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Conectare Supabase
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
 function getSaptamanaCurenta() {
@@ -21,7 +20,6 @@ function getSaptamanaCurenta() {
   return `${d.getFullYear()}-W${weekNo}`;
 }
 
-// Ruta principala HTML
 app.get('/', (req, res) => {
   const rootPath = path.join(__dirname, 'index.html');
   const publicPath = path.join(__dirname, 'public', 'index.html');
@@ -35,14 +33,12 @@ app.get('/', (req, res) => {
   }
 });
 
-// Autentificare Discord
 app.get('/login-discord', (req, res) => {
   const redirectUri = encodeURIComponent(process.env.DISCORD_REDIRECT_URI);
   const url = `https://discord.com/api/oauth2/authorize?client_id=${process.env.DISCORD_CLIENT_ID}&redirect_uri=${redirectUri}&response_type=code&scope=identify`;
   res.redirect(url);
 });
 
-// Callback Discord
 app.get('/auth/discord/callback', async (req, res) => {
   const code = req.query.code;
   if (!code) return res.send("Eroare la autentificare.");
@@ -70,7 +66,6 @@ app.get('/auth/discord/callback', async (req, res) => {
   }
 });
 
-// Date Jucator
 app.get('/api/jucator/:id', async (req, res) => {
   const discord_id = String(req.params.id);
   const saptamana = getSaptamanaCurenta();
@@ -91,7 +86,6 @@ app.get('/api/jucator/:id', async (req, res) => {
   res.json({ success: true, jucator });
 });
 
-// Clasament Top 10 Săptămânal
 app.get('/api/leaderboard', async (req, res) => {
   const saptamana = getSaptamanaCurenta();
 
@@ -112,7 +106,6 @@ app.get('/api/leaderboard', async (req, res) => {
   }
 });
 
-// Salvare Scor
 app.post('/api/salveaza-scor', async (req, res) => {
   const { discord_id, nume_discord, scorObtinut } = req.body;
 
