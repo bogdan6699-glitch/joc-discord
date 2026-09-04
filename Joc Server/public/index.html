@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <title>Joc Test Discord</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; background: #1e1e2e; color: white; }
+        button { padding: 12px 20px; font-size: 16px; cursor: pointer; border-radius: 5px; border: none; background: #7289da; color: white; }
+        .box { background: #2b2b3b; padding: 20px; display: inline-block; border-radius: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="box">
+    <h1>Joc cu Scor Cumulat (Max 3/Săptămână)</h1>
+
+    <div id="sectiune-autentificare">
+        <button onclick="window.location.href='/login-discord'">Conectează-te cu Discord</button>
+    </div>
+
+    <div id="sectiune-joc" style="display:none;">
+        <h3>Salut, <span id="nume-jucator" style="color: #7289da;"></span>!</h3>
+        <p>Apasă butonul pentru a simula o partidă jucată (ex: obții 100 puncte):</p>
+        <button onclick="joacaAproape()">Joacă o partidă (Obține 100p)</button>
+
+        <h4 id="rezultat"></h4>
+    </div>
+</div>
+
+<script>
+    // Citim datele din URL trimise după conectarea cu Discord
+    const urlParams = new URLSearchParams(window.location.search);
+    const discordId = urlParams.get('id');
+    const discordUsername = urlParams.get('username');
+
+    if (discordId && discordUsername) {
+        document.getElementById('sectiune-autentificare').style.display = 'none';
+        document.getElementById('sectiune-joc').style.display = 'block';
+        document.getElementById('nume-jucator').innerText = discordUsername;
+    }
+
+    async function joacaAproape() {
+        // Simulăm obținerea a 100 de puncte într-un joc
+        const raspuns = await fetch('/api/salveaza-scor', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                discord_id: discordId,
+                nume_discord: discordUsername,
+                scorObtinut: 100
+            })
+        });
+
+        const date = await raspuns.json();
+
+        if (date.succes) {
+            document.getElementById('rezultat').innerHTML = 
+                `✅ ${date.mesaj}<br>Scor Total Cumulat: <b>${date.scorTotal}</b><br>Încercări rămase: <b>${date.incercariRamase}/3</b>`;
+        } else {
+            document.getElementById('rezultat').innerHTML = `<span style="color:red;">❌ ${date.mesaj}</span>`;
+        }
+    }
+</script>
+
+</body>
+</html>
