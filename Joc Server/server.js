@@ -5,9 +5,7 @@ const path = require('path');
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Setază o cheie secretă pentru resetare
-const ADMIN_SECRET_KEY = 'reseteaza123';
-
+// Configurare conexiune Bază de Date PostgreSQL
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false }
@@ -16,11 +14,12 @@ const pool = new Pool({
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Ruta principala
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// API: Date Jucator
+// API: Preluare date jucător
 app.get('/api/jucator/:discord_id', async (req, res) => {
   try {
     const { discord_id } = req.params;
@@ -32,6 +31,7 @@ app.get('/api/jucator/:discord_id', async (req, res) => {
       res.json({ success: true, jucator: { incercari_ramase: 3, scor_total: 0 } });
     }
   } catch (err) {
+    console.error(err);
     res.status(500).json({ success: false, message: 'Eroare la preluarea datelor.' });
   }
 });
@@ -54,7 +54,7 @@ app.post('/api/salveaza-scor', async (req, res) => {
     const jucator = userRes.rows[0];
 
     if (jucator.incercari_ramase <= 0) {
-      return res.json({ success: false, message: 'Nu mai ai încercări rămase!' });
+      return res.json({ success: false, message: 'Nu mai ai încercări rămase săptămâna aceasta!' });
     }
 
     const noiIncercari = jucator.incercari_ramase - 1;
@@ -71,6 +71,7 @@ app.post('/api/salveaza-scor', async (req, res) => {
       incercari_ramase: noiIncercari
     });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ success: false, message: 'Eroare la salvarea scorului.' });
   }
 });
@@ -81,18 +82,19 @@ app.get('/api/leaderboard', async (req, res) => {
     const result = await pool.query('SELECT nume_discord, scor_total FROM jucatori ORDER BY scor_total DESC LIMIT 10');
     res.json({ success: true, leaderboard: result.rows });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ success: false, message: 'Eroare la preluarea clasamentului.' });
   }
 });
 
-// RUTA SECRETĂ PENTRU RESETARE DIRECT DIN BROWSER
-app.get(`/admin/reset-incercari-${ADMIN_SECRET_KEY}`, async (req, res) => {
+// RUTA FIXA DE RESETARE ADMIN DIRECT DIN BROWSER
+app.get('/admin/reset-incercari-reseteaza1123', async (req, res) => {
   try {
     await pool.query('UPDATE jucatori SET incercari_ramase = 3');
-    res.send('<h1 style="color: green; font-family: sans-serif; text-align: center; margin-top: 50px;">✅ Încercările au fost resetate cu succes la 3/3 pentru toți jucătorii!</h1>');
+    res.send('<h1 style="color: #00ff88; font-family: sans-serif; text-align: center; margin-top: 50px; background-color: #080813; padding: 20px;">✅ Încercările au fost resetate cu succes la 3/3 pentru toti jucatorii!</h1>');
   } catch (err) {
     console.error(err);
-    res.status(500).send('<h1 style="color: red; font-family: sans-serif; text-align: center; margin-top: 50px;">❌ Eroare la resetarea bazei de date!</h1>');
+    res.status(500).send('<h1 style="color: #ff4d4d; font-family: sans-serif; text-align: center; margin-top: 50px; background-color: #080813; padding: 20px;">❌ Eroare la resetarea bazei de date!</h1>');
   }
 });
 
