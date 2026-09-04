@@ -60,48 +60,79 @@ app.get('/auth/discord/callback', async (req, res) => {
 // 3. Salvare Scor și Verificare 3 Încercări
 app.post('/api/salveaza-scor', async (req, res) => {
   const { discord_id, nume_discord, scorObtinut } = req.body;
+
+  // Verificare date de la client
+  if (!discord_id) {
+    return res.status(400).json({ success: false, message: "Utilizator neautentificat!" });
+  }
+
   const saptamana = getSaptamanaCurenta();
 
-  // Căutăm jucătorul în Baza de Date
-  let { data: jucator } = await supabase
-    .from('jucatori')
-    .select('*')
-    .eq('discord_id', discord_id)
-    .single();
+  try {
+    // 1. Căutăm jucătorul în Baza de Date
+    let { data: jucator, error: fetchError } = await supabase
+      .from('jucatori')
+      .select('*')
+      .eq('discord_id', discord_id)
+      .maybeSingle();
 
-  // Dacă e prima dată când joacă sau e o săptămână nouă -> Resetăm datele la 3 încercări
-  if (!jucator || jucator.saptamana_curenta !== saptamana) {
-    jucator = {
-      discord_id: discord_id,
-      nume_discord: nume_discord,
-      incercari_ramase: 3,
-      scor_total: 0,
+    if (fetchError) {
+      console.error("Eroare la citire Supabase:", fetchError);
+    }
+
+    // 2. Dacă e prima dată când joacă SAU e o săptămână nouă -> Resetăm datele la 3 încercări
+    if (!jucator || jucator.saptamana_curenta !== saptamana) {
+      jucator = {
+        discord_id: discord_id,
+        nume_discord: nume_discord || 'Jucator Anonim',
+        incercari_ramase: 3,
+        scor_total: 0,
+        saptamana_curenta: saptamana
+      };
+    }
+
+    // 3. Verificăm dacă mai are încercări rămase
+    if (jucator.incercari_ramase <= 0) {
+      return res.json({
+        success: false,
+        message: "Ai epuizat cele 3 încercări pentru săptămâna aceasta!",
+        scor_total: jucator.scor_total,
+        incercari_ramase: 0
+      });
+    }
+
+    // 4. Actualizăm datele (scădem 1 încercare și adăugăm scorul)
+    const dateActualizate = {
+      discord_id: jucator.discord_id,
+      nume_discord: nume_discord || jucator.nume_discord,
+      incercari_ramase: jucator.incercari_ramase - 1,
+      scor_total: jucator.scor_total + (Number(scorObtinut) || 0),
       saptamana_curenta: saptamana
     };
-  }
 
-  // Verificăm dacă mai are încercări săptămâna asta
-  if (jucator.incercari_ramase <= 0) {
-    return res.status(403).json({ 
-      succes: false, 
-      mesaj: "Ai folosit deja toate cele 3 încercări pe săptămâna aceasta!" 
+    // 5. Salvăm în Supabase (UPSERT inserează dacă nu există, sau face UPDATE dacă există)
+    const { data: savedData, error: saveError } = await supabase
+      .from('jucatori')
+      .upsert(dateActualizate, { onConflict: 'discord_id' })
+      .select();
+
+    if (saveError) {
+      console.error("Eroare salvare Supabase:", saveError);
+      return res.status(500).json({ success: false, message: "Eroare la salvarea în baza de date." });
+    }
+
+    // 6. Răspuns de succes trimis către frontend
+    return res.json({
+      success: true,
+      message: "Scorul a fost adăugat cu succes!",
+      scor_total: dateActualizate.scor_total,
+      incercari_ramase: dateActualizate.incercari_ramase
     });
+
+  } catch (err) {
+    console.error("Eroare server:", err);
+    return res.status(500).json({ success: false, message: "Eroare internă de server." });
   }
-
-  // Actualizăm datele
-  jucator.incercari_ramase -= 1;
-  jucator.scor_total += Number(scorObtinut); // Adunăm scorul nou la cel vechi
-  jucator.nume_discord = nume_discord;
-
-  // Salvăm în Supabase
-  await supabase.from('jucatori').upsert(jucator);
-
-  return res.json({
-    succes: true,
-    mesaj: "Scorul a fost adăugat!",
-    scorTotal: jucator.scor_total,
-    incercariRamase: jucator.incercari_ramase
-  });
 });
 
 app.listen(3000, () => console.log('Serverul rulează pe http://localhost:3000'));
