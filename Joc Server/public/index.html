@@ -22,7 +22,7 @@
       background: #111124;
       padding: 25px;
       border-radius: 16px;
-      box-shadow: 0 0 35px rgba(0, 255, 245, 0.2);
+      box-shadow: 0 0 35px rgba(0, 255, 245, 0.15);
       text-align: center;
       max-width: 680px;
       width: 100%;
@@ -35,6 +35,7 @@
       margin-bottom: 5px;
       text-shadow: 0 0 12px rgba(0, 255, 245, 0.6);
       font-size: 28px;
+      letter-spacing: 2px;
     }
 
     .btn-login {
@@ -46,7 +47,13 @@
       border-radius: 8px;
       display: inline-block;
       margin-top: 15px;
-      box-shadow: 0 4px 18px rgba(88, 101, 242, 0.5);
+      box-shadow: 0 4px 18px rgba(88, 101, 242, 0.4);
+      transition: transform 0.2s, background-color 0.2s;
+    }
+
+    .btn-login:hover {
+      background-color: #4752C4;
+      transform: translateY(-2px);
     }
 
     canvas {
@@ -54,7 +61,7 @@
       border: 2px solid #00fff5;
       border-radius: 10px;
       margin-top: 15px;
-      cursor: pointer;
+      box-shadow: 0 0 15px rgba(0, 255, 245, 0.2);
     }
 
     .stats {
@@ -82,7 +89,7 @@
 
   <div class="container">
     <h1>NEON DODGER</h1>
-    <p style="color: #8a8aa8; margin-top: 0;">Mișcă-te cu SĂGEȚILE (⬅️ / ➡️) sau A / D. Ferește obstacolele și strânge bănuții!</p>
+    <p style="color: #8a8aa8; margin-top: 0; font-size: 14px;">Folosește SĂGEȚILE (⬅️ / ➡️) sau tastele A / D pentru mișcare.</p>
 
     <div id="auth-section">
       <a href="/login-discord" class="btn-login">Conectează-te cu Discord</a>
@@ -91,10 +98,10 @@
     <div id="game-section" style="display: none;">
       <div style="display: flex; justify-content: space-between; align-items: center; padding: 0 10px;">
         <span style="font-size: 14px;">Jucător: <strong id="username-display" style="color: #00fff5;">-</strong></span>
-        <span style="font-size: 13px; color: #8a8aa8;">Apăsă SPACE / Click pt Start</span>
+        <span style="font-size: 13px; color: #8a8aa8;">Apasă SPACE sau Click pentru a începe</span>
       </div>
 
-      <canvas id="gameCanvas" width="600" height="320"></canvas>
+      <canvas id="gameCanvas" width="600" height="340"></canvas>
 
       <div class="stats">
         <div>Scor Curent: <strong id="current-score-display" style="color: #00fff5;">0</strong> p</div>
@@ -193,6 +200,7 @@
       }
     }
 
+    // Logică Joc Canvas
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
 
@@ -200,11 +208,19 @@
     let currentScore = 0;
     let gameLoopId;
 
-    const player = { x: 285, y: 270, width: 30, height: 30, speed: 7 };
+    const player = {
+      x: 285,
+      y: 290,
+      width: 30,
+      height: 30,
+      speed: 6.5
+    };
+
     let obstacles = [];
     let coins = [];
     let keys = {};
     let timer = 0;
+    let difficultyMultiplier = 1;
 
     window.addEventListener('keydown', (e) => {
       keys[e.code] = true;
@@ -216,26 +232,41 @@
     window.addEventListener('keyup', (e) => { keys[e.code] = false; });
     canvas.addEventListener('click', () => { if (!isPlaying) startGame(); });
 
+    function drawStartScreen() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#00fff5';
+      ctx.font = 'bold 20px Segoe UI, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Apasă SPACE sau Click pentru a juca!', canvas.width / 2, canvas.height / 2);
+    }
+
     function spawnElements() {
       timer++;
-      if (timer % 35 === 0) {
-        // Obstacol de ferit
+      
+      // Crește dificultatea treptat la fiecare 300 cadre (~5 secunde)
+      if (timer % 300 === 0) {
+        difficultyMultiplier += 0.15;
+      }
+
+      // Generare obstacole (frecvență adaptabilă)
+      const obstacleFrequency = Math.max(20, Math.floor(45 / difficultyMultiplier));
+      if (timer % obstacleFrequency === 0) {
         obstacles.push({
-          x: Math.random() * (canvas.width - 35),
-          y: -30,
-          width: 35,
-          height: 20,
-          speed: 2 + Math.random() * 1.5
+          x: Math.random() * (canvas.width - 30),
+          y: -25,
+          width: 30 + Math.random() * 15,
+          height: 18,
+          speed: (2.2 + Math.random() * 1.5) * difficultyMultiplier
         });
       }
 
-      if (timer % 50 === 0) {
-        // Bănuiți de strâns
+      // Generare monede bonus
+      if (timer % 40 === 0) {
         coins.push({
           x: 15 + Math.random() * (canvas.width - 30),
           y: -20,
           radius: 8,
-          speed: 2
+          speed: 2.5
         });
       }
     }
@@ -246,16 +277,23 @@
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       // Mișcare Jucător
-      if ((keys['ArrowLeft'] || keys['KeyA']) && player.x > 0) player.x -= player.speed;
-      if ((keys['ArrowRight'] || keys['KeyD']) && player.x < canvas.width - player.width) player.x += player.speed;
+      if ((keys['ArrowLeft'] || keys['KeyA']) && player.x > 0) {
+        player.x -= player.speed;
+      }
+      if ((keys['ArrowRight'] || keys['KeyD']) && player.x < canvas.width - player.width) {
+        player.x += player.speed;
+      }
 
-      // Desenează Jucător
+      // Desenează Jucător cu strălucire (Glow)
+      ctx.shadowBlur = 15;
+      ctx.shadowColor = '#00fff5';
       ctx.fillStyle = '#00fff5';
       ctx.fillRect(player.x, player.y, player.width, player.height);
 
       spawnElements();
 
-      // Monede (+15p)
+      // Monede Bonus (+15p)
+      ctx.shadowColor = '#ffd700';
       for (let i = coins.length - 1; i >= 0; i--) {
         let c = coins[i];
         c.y += c.speed;
@@ -265,22 +303,23 @@
         ctx.arc(c.x, c.y, c.radius, 0, Math.PI * 2);
         ctx.fill();
 
-        // Verifică colectarea
+        // Verifică colectarea monedei
         if (
-          c.x > player.x &&
-          c.x < player.x + player.width &&
-          c.y > player.y &&
-          c.y < player.y + player.height
+          c.x > player.x - c.radius &&
+          c.x < player.x + player.width + c.radius &&
+          c.y > player.y - c.radius &&
+          c.y < player.y + player.height + c.radius
         ) {
           currentScore += 15;
           document.getElementById('current-score-display').innerText = currentScore;
           coins.splice(i, 1);
-        } else if (c.y > canvas.height) {
+        } else if (c.y > canvas.height + 10) {
           coins.splice(i, 1);
         }
       }
 
       // Obstacole
+      ctx.shadowColor = '#ff0055';
       for (let i = obstacles.length - 1; i >= 0; i--) {
         let obs = obstacles[i];
         obs.y += obs.speed;
@@ -288,7 +327,7 @@
         ctx.fillStyle = '#ff0055';
         ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
 
-        // Verifică Coliziunea
+        // Verifică coliziunea
         if (
           player.x < obs.x + obs.width &&
           player.x + player.width > obs.x &&
@@ -299,12 +338,16 @@
           return;
         }
 
+        // Puncte acordate pentru trecerea cu succes peste obstacol
         if (obs.y > canvas.height) {
-          currentScore += 5; // Puncte pentru trecere
+          currentScore += 5;
           document.getElementById('current-score-display').innerText = currentScore;
           obstacles.splice(i, 1);
         }
       }
+
+      // Resetare umbră pentru performanță
+      ctx.shadowBlur = 0;
 
       gameLoopId = requestAnimationFrame(updateGame);
     }
@@ -315,9 +358,10 @@
       isPlaying = true;
       currentScore = 0;
       timer = 0;
+      difficultyMultiplier = 1;
       obstacles = [];
       coins = [];
-      player.x = 285;
+      player.x = canvas.width / 2 - player.width / 2;
       document.getElementById('current-score-display').innerText = '0';
       updateGame();
     }
@@ -326,10 +370,13 @@
       isPlaying = false;
       cancelAnimationFrame(gameLoopId);
 
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = '#ff0055';
       ctx.fillStyle = '#ff0055';
-      ctx.font = 'bold 24px Arial';
+      ctx.font = 'bold 26px Segoe UI, sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText(`GAME OVER! Scor: ${currentScore}`, canvas.width / 2, canvas.height / 2);
+      ctx.shadowBlur = 0;
 
       const statusDiv = document.getElementById('status-message');
       statusDiv.className = "status-msg";
@@ -364,6 +411,7 @@
     }
 
     initAuth();
+    drawStartScreen();
   </script>
 </body>
 </html>
