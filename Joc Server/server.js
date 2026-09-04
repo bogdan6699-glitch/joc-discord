@@ -1,67 +1,99 @@
 const express = require('express');
 const axios = require('axios');
 const { createClient } = require('@supabase/supabase-js');
-require('dotenv').config();
+const path = require('path');
 
 const app = express();
 app.use(express.json());
-app.use(express.static('public')); // Caută fișierele jocului în folderul "public"
+app.use(express.static(path.join(__dirname)));
 
-// Conectare la Supabase
+// Conectare Supabase
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
-// Funcție care determină săptămâna anului (ex: 2026-W36)
+// Memorie temporară pentru sesiuni de utilizatori (în producție se folosesc cookie-uri/sessions)
+let activeUsers = {};
+
+// Calcul săptămână curentă (ex: "2026-W36")
 function getSaptamanaCurenta() {
-  const acum = new Date();
-  const inceputAn = new Date(acum.getFullYear(), 0, 1);
-  const zile = Math.floor((acum - inceputAn) / (24 * 60 * 60 * 1000));
-  const numarSaptamana = Math.ceil((zile + inceputAn.getDay() + 1) / 7);
-  return `${acum.getFullYear()}-W${numarSaptamana}`;
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + 4 - (d.getDay() || 7));
+  const yearStart = new Date(d.getFullYear(), 0, 1);
+  const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+  return `${d.getFullYear()}-W${weekNo}`;
 }
 
-// 1. Pasul de Autentificare Discord
+// 1. Ruta de Autentificare Discord
 app.get('/login-discord', (req, res) => {
-  const url = `https://discord.com/api/oauth2/authorize?client_id=${process.env.DISCORD_CLIENT_ID}&redirect_uri=${encodeURIComponent(process.env.DISCORD_REDIRECT_URI)}&response_type=code&scope=identify`;
+  const redirectUri = encodeURIComponent(process.env.DISCORD_REDIRECT_URI);
+  const url = `https://discord.com/api/oauth2/authorize?client_id=${process.env.DISCORD_CLIENT_ID}&redirect_uri=${redirectUri}&response_type=code&scope=identify`;
   res.redirect(url);
 });
 
-// 2. Callback-ul de la Discord (Preluare nume și ID automat)
+// 2. Callback Discord
 app.get('/auth/discord/callback', async (req, res) => {
   const code = req.query.code;
   if (!code) return res.send("Eroare la autentificare.");
 
   try {
-    // Schimbăm codul pe un token de acces
     const tokenResponse = await axios.post('https://discord.com/api/oauth2/token', new URLSearchParams({
       client_id: process.env.DISCORD_CLIENT_ID,
       client_secret: process.env.DISCORD_CLIENT_SECRET,
       grant_type: 'authorization_code',
       code: code,
-      redirect_uri: process.env.DISCORD_REDIRECT_URI,
+      redirect_uri: process.env.DISCORD_REDIRECT_URI
     }), {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
     });
 
-    // Luăm datele reale ale profilului de Discord
     const userResponse = await axios.get('https://discord.com/api/users/@me', {
       headers: { Authorization: `Bearer ${tokenResponse.data.access_token}` }
     });
 
-    const discordUser = userResponse.data; // { id, username }
+    const user = userResponse.data;
+    activeUsers['current'] = user; // Salvează temporar utilizatorul conectat
 
-    // Redirecționăm jucătorul înapoi în joc cu ID-ul și numele salvat temporar
-    res.redirect(`/?id=${discordUser.id}&username=${encodeURIComponent(discordUser.username)}`);
+    res.redirect('/');
   } catch (error) {
-    console.error(error);
+    console.error("Eroare OAuth Discord:", error.response ? error.response.data : error.message);
     res.send("A apărut o eroare la conectarea cu Discord.");
   }
 });
 
-// 3. Salvare Scor și Verificare 3 Încercări
+// 3. Preluare utilizator curent pentru Frontend
+app.get('/api/user-curent', (req, res) => {
+  if (activeUsers['current']) {
+    res.json(activeUsers['current']);
+  } else {
+    res.status(401).json({ error: "Neautentificat" });
+  }
+});
+
+// 4. Extragere date jucător din Supabase
+app.get('/api/jucator/:id', async (req, res) => {
+  const discord_id = req.params.id;
+  const saptamana = getSaptamanaCurenta();
+
+  const { data: jucator } = await supabase
+    .from('jucatori')
+    .select('*')
+    .eq('discord_id', discord_id)
+    .maybeSingle();
+
+  if (!jucator || jucator.saptamana_curenta !== saptamana) {
+    return res.json({
+      success: true,
+      jucator: { scor_total: 0, incercari_ramase: 3 }
+    });
+  }
+
+  res.json({ success: true, jucator });
+});
+
+// 5. Salvare Scor în Supabase (Ruta apelată de joc)
 app.post('/api/salveaza-scor', async (req, res) => {
   const { discord_id, nume_discord, scorObtinut } = req.body;
 
-  // Verificare date de la client
   if (!discord_id) {
     return res.status(400).json({ success: false, message: "Utilizator neautentificat!" });
   }
@@ -69,39 +101,31 @@ app.post('/api/salveaza-scor', async (req, res) => {
   const saptamana = getSaptamanaCurenta();
 
   try {
-    // 1. Căutăm jucătorul în Baza de Date
-    let { data: jucator, error: fetchError } = await supabase
+    let { data: jucator } = await supabase
       .from('jucatori')
       .select('*')
       .eq('discord_id', discord_id)
       .maybeSingle();
 
-    if (fetchError) {
-      console.error("Eroare la citire Supabase:", fetchError);
-    }
-
-    // 2. Dacă e prima dată când joacă SAU e o săptămână nouă -> Resetăm datele la 3 încercări
     if (!jucator || jucator.saptamana_curenta !== saptamana) {
       jucator = {
         discord_id: discord_id,
-        nume_discord: nume_discord || 'Jucator Anonim',
+        nume_discord: nume_discord || 'Jucator',
         incercari_ramase: 3,
         scor_total: 0,
         saptamana_curenta: saptamana
       };
     }
 
-    // 3. Verificăm dacă mai are încercări rămase
     if (jucator.incercari_ramase <= 0) {
       return res.json({
         success: false,
-        message: "Ai epuizat cele 3 încercări pentru săptămâna aceasta!",
+        message: "Ai epuizat cele 3 încercări pentru această săptămână!",
         scor_total: jucator.scor_total,
         incercari_ramase: 0
       });
     }
 
-    // 4. Actualizăm datele (scădem 1 încercare și adăugăm scorul)
     const dateActualizate = {
       discord_id: jucator.discord_id,
       nume_discord: nume_discord || jucator.nume_discord,
@@ -110,18 +134,15 @@ app.post('/api/salveaza-scor', async (req, res) => {
       saptamana_curenta: saptamana
     };
 
-    // 5. Salvăm în Supabase (UPSERT inserează dacă nu există, sau face UPDATE dacă există)
-    const { data: savedData, error: saveError } = await supabase
+    const { error: saveError } = await supabase
       .from('jucatori')
-      .upsert(dateActualizate, { onConflict: 'discord_id' })
-      .select();
+      .upsert(dateActualizate, { onConflict: 'discord_id' });
 
     if (saveError) {
-      console.error("Eroare salvare Supabase:", saveError);
+      console.error("Eroare Supabase:", saveError);
       return res.status(500).json({ success: false, message: "Eroare la salvarea în baza de date." });
     }
 
-    // 6. Răspuns de succes trimis către frontend
     return res.json({
       success: true,
       message: "Scorul a fost adăugat cu succes!",
@@ -135,4 +156,5 @@ app.post('/api/salveaza-scor', async (req, res) => {
   }
 });
 
-app.listen(3000, () => console.log('Serverul rulează pe http://localhost:3000'));
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Serverul rulează pe portul ${PORT}`));
