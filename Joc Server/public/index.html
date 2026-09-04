@@ -6,7 +6,7 @@
   <title>Cyber-Runner Game</title>
   <style>
     body {
-      background-color: #121225;
+      background-color: #0b0b1a;
       color: #ffffff;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       display: flex;
@@ -18,18 +18,20 @@
     }
 
     .container {
-      background: #1a1a3a;
+      background: #14142b;
       padding: 30px;
       border-radius: 12px;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 8px 30px rgba(0, 255, 245, 0.15);
       text-align: center;
       max-width: 650px;
       width: 100%;
+      border: 1px solid #222244;
     }
 
     h1 {
       color: #00fff5;
       margin-bottom: 5px;
+      text-shadow: 0 0 10px rgba(0, 255, 245, 0.5);
     }
 
     .btn-login {
@@ -41,15 +43,11 @@
       border-radius: 6px;
       display: inline-block;
       margin-top: 15px;
-      transition: 0.2s;
-    }
-
-    .btn-login:hover {
-      background-color: #4752C4;
+      box-shadow: 0 4px 14px rgba(88, 101, 242, 0.4);
     }
 
     canvas {
-      background: #0f0f1b;
+      background: #080811;
       border: 2px solid #00fff5;
       border-radius: 8px;
       margin-top: 15px;
@@ -58,10 +56,12 @@
 
     .stats {
       margin-top: 15px;
-      background: #25254d;
+      background: #1c1c3c;
       padding: 12px;
       border-radius: 8px;
       font-size: 16px;
+      display: flex;
+      justify-content: space-around;
     }
 
     .status-msg {
@@ -76,8 +76,8 @@
 <body>
 
   <div class="container">
-    <h1>Cyber-Runner</h1>
-    <p>Conectează-te cu Discord și acumulează cel mai mare scor!</p>
+    <h1>CYBER-RUNNER</h1>
+    <p>Sari peste obstacole! Jocul devine din ce în ce mai rapid!</p>
 
     <div id="auth-section">
       <a href="/login-discord" class="btn-login">Conectează-te cu Discord</a>
@@ -85,12 +85,12 @@
 
     <div id="game-section" style="display: none;">
       <h3>Salut, <span id="username-display" style="color: #00fff5;">Jucător</span>!</h3>
-      <p style="font-size: 14px; color: #aaa;">Apasă <strong>SPACE</strong> sau <strong>CLICK</strong> pe joc pentru a sări peste obstacole.</p>
+      <p style="font-size: 13px; color: #aaa;">Apasă <strong>SPACE</strong> sau <strong>CLICK</strong> pe joc pentru a sări.</p>
 
       <canvas id="gameCanvas" width="600" height="200"></canvas>
 
       <div class="stats">
-        <div>Scor Total Cumulat: <strong id="score-display" style="color: #00fff5;">0</strong> puncte</div>
+        <div>Scor Cumulat: <strong id="score-display" style="color: #00fff5;">0</strong> p</div>
         <div>Încercări Rămase: <strong id="attempts-display" style="color: #ff0055;">3</strong>/3</div>
       </div>
 
@@ -131,29 +131,39 @@
           document.getElementById('attempts-display').innerText = data.jucator.incercari_ramase ?? 3;
         }
       } catch (err) {
-        console.error("Eroare încărcare statistici:", err);
+        console.error("Eroare statistici:", err);
       }
     }
 
+    // --- MOTORUL JOCULUI NOU & DINAMIC ---
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
 
     let isPlaying = false;
     let currentScore = 0;
+    let gameSpeed = 4; // Începe lent
     let gameLoopId;
 
-    const player = { x: 50, y: 140, width: 30, height: 30, dy: 0, gravity: 0.6, jumpPower: -10, isGrounded: true };
+    const player = { x: 50, y: 145, width: 25, height: 25, dy: 0, gravity: 0.55, jumpPower: -9.5, isGrounded: true };
     let obstacles = [];
     let obstacleTimer = 0;
+    let spawnInterval = 100;
 
     function drawPlayer() {
+      // Dâra luminoasă (trail)
+      ctx.fillStyle = 'rgba(0, 255, 245, 0.3)';
+      ctx.fillRect(player.x - 8, player.y + 4, player.width, player.height - 4);
+
+      // Corp jucător
       ctx.fillStyle = '#00fff5';
       ctx.fillRect(player.x, player.y, player.width, player.height);
     }
 
     function drawObstacles() {
-      ctx.fillStyle = '#ff0055';
-      obstacles.forEach(obs => ctx.fillRect(obs.x, obs.y, obs.width, obs.height));
+      obstacles.forEach(obs => {
+        ctx.fillStyle = obs.color;
+        ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+      });
     }
 
     function updateGame() {
@@ -161,23 +171,43 @@
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+      // Linie sol
+      ctx.strokeStyle = '#222244';
+      ctx.beginPath();
+      ctx.moveTo(0, 170);
+      ctx.lineTo(600, 170);
+      ctx.stroke();
+
+      // Fizică
       player.dy += player.gravity;
       player.y += player.dy;
 
-      if (player.y >= 140) {
-        player.y = 140;
+      if (player.y >= 145) {
+        player.y = 145;
         player.dy = 0;
         player.isGrounded = true;
       }
 
+      // Viteză crescătoare progresiv
+      gameSpeed = 4 + (currentScore / 80); 
+      spawnInterval = Math.max(45, 100 - Math.floor(currentScore / 40));
+
+      // Generare obstacole variate
       obstacleTimer++;
-      if (obstacleTimer > 90) {
-        obstacles.push({ x: canvas.width, y: 145, width: 20, height: 25 });
+      if (obstacleTimer > spawnInterval) {
+        const types = [
+          { width: 15, height: 25, y: 145, color: '#ff0055' }, // Micul rapid
+          { width: 25, height: 35, y: 135, color: '#ff5500' }, // Înalt
+          { width: 35, height: 20, y: 150, color: '#ff00aa' }  // Blocurile late
+        ];
+        const chosen = types[Math.floor(Math.random() * types.length)];
+        obstacles.push({ x: canvas.width, ...chosen });
         obstacleTimer = 0;
       }
 
+      // Mișcare și coliziune
       for (let i = 0; i < obstacles.length; i++) {
-        obstacles[i].x -= 5;
+        obstacles[i].x -= gameSpeed;
 
         if (
           player.x < obstacles[i].x + obstacles[i].width &&
@@ -190,7 +220,8 @@
         }
       }
 
-      if (obstacles.length > 0 && obstacles[0].x < -20) {
+      // Scor
+      if (obstacles.length > 0 && obstacles[0].x < -40) {
         obstacles.shift();
         currentScore += 10;
       }
@@ -198,9 +229,11 @@
       drawPlayer();
       drawObstacles();
 
+      // Afișare date în timp real
       ctx.fillStyle = '#ffffff';
-      ctx.font = '16px Arial';
-      ctx.fillText(`Scor Runda: ${currentScore}`, 10, 25);
+      ctx.font = '14px Arial';
+      ctx.fillText(`Scor: ${currentScore}`, 10, 20);
+      ctx.fillText(`Viteză: ${gameSpeed.toFixed(1)}x`, 520, 20);
 
       gameLoopId = requestAnimationFrame(updateGame);
     }
@@ -210,8 +243,9 @@
       document.getElementById('status-message').innerText = "";
       isPlaying = true;
       currentScore = 0;
+      gameSpeed = 4;
       obstacles = [];
-      player.y = 140;
+      player.y = 145;
       updateGame();
     }
 
@@ -220,10 +254,11 @@
       cancelAnimationFrame(gameLoopId);
 
       ctx.fillStyle = '#ff0055';
-      ctx.font = '24px Arial';
-      ctx.fillText(`GAME OVER! Scor: ${currentScore}`, 170, 100);
+      ctx.font = 'bold 22px Arial';
+      ctx.fillText(`GAME OVER! Scor obtinut: ${currentScore}`, 140, 90);
 
       const statusDiv = document.getElementById('status-message');
+      statusDiv.className = "status-msg";
       statusDiv.innerText = "Se salvează scorul...";
 
       try {
