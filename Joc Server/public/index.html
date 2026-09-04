@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cyber-Runner Game</title>
+  <title>Cyber-Runner Deluxe</title>
   <style>
     body {
-      background-color: #0b0b1a;
+      background-color: #080813;
       color: #ffffff;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       display: flex;
@@ -19,77 +19,117 @@
     }
 
     .container {
-      background: #14142b;
-      padding: 30px;
-      border-radius: 12px;
-      box-shadow: 0 8px 30px rgba(0, 255, 245, 0.15);
+      background: #111124;
+      padding: 25px;
+      border-radius: 16px;
+      box-shadow: 0 0 35px rgba(0, 255, 245, 0.2);
       text-align: center;
-      max-width: 650px;
+      max-width: 680px;
       width: 100%;
-      border: 1px solid #222244;
+      border: 1px solid #1e1e42;
       box-sizing: border-box;
     }
 
     h1 {
       color: #00fff5;
       margin-bottom: 5px;
-      text-shadow: 0 0 10px rgba(0, 255, 245, 0.5);
+      text-shadow: 0 0 12px rgba(0, 255, 245, 0.6);
+      font-size: 28px;
+      letter-spacing: 2px;
     }
 
     .btn-login {
       background-color: #5865F2;
       color: white;
-      padding: 12px 24px;
+      padding: 14px 28px;
       text-decoration: none;
       font-weight: bold;
-      border-radius: 6px;
+      border-radius: 8px;
       display: inline-block;
       margin-top: 15px;
-      box-shadow: 0 4px 14px rgba(88, 101, 242, 0.4);
+      box-shadow: 0 4px 18px rgba(88, 101, 242, 0.5);
+      transition: transform 0.2s;
+    }
+
+    .btn-login:hover {
+      transform: scale(1.05);
     }
 
     canvas {
-      background: #080811;
+      background: #05050d;
       border: 2px solid #00fff5;
-      border-radius: 8px;
+      border-radius: 10px;
       margin-top: 15px;
       cursor: pointer;
+      box-shadow: inset 0 0 20px rgba(0, 255, 245, 0.1);
     }
 
     .stats {
       margin-top: 15px;
-      background: #1c1c3c;
+      background: #181835;
       padding: 12px;
       border-radius: 8px;
-      font-size: 16px;
+      font-size: 15px;
       display: flex;
       justify-content: space-around;
+      border: 1px solid #262654;
     }
 
     .status-msg {
-      margin-top: 10px;
+      margin-top: 12px;
       font-weight: bold;
+      min-height: 24px;
     }
 
     .error { color: #ff4d4d; }
     .success { color: #00ff88; }
+
+    .legend {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      margin-top: 10px;
+      font-size: 12px;
+      color: #aaa;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+    }
   </style>
 </head>
 <body>
 
   <div class="container">
-    <h1>CYBER-RUNNER</h1>
-    <p>Sari peste obstacole! Jocul devine din ce în ce mai rapid!</p>
+    <h1>CYBER-RUNNER DELUXE</h1>
+    <p style="color: #8a8aa8; margin-top: 0;">Săritură dublă • Power-up-uri • Dronă Aeriană</p>
 
     <div id="auth-section">
       <a href="/login-discord" class="btn-login">Conectează-te cu Discord</a>
     </div>
 
     <div id="game-section" style="display: none;">
-      <h3>Salut, <span id="username-display" style="color: #00fff5;">Jucător</span>!</h3>
-      <p style="font-size: 13px; color: #aaa;">Apasă <strong>SPACE</strong> sau <strong>CLICK</strong> pe joc pentru a sări.</p>
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 0 10px;">
+        <span style="font-size: 14px;">Jucător: <strong id="username-display" style="color: #00fff5;">-</strong></span>
+        <span style="font-size: 13px; color: #8a8aa8;">[SPACE / CLICK] - Sări / Double Jump</span>
+      </div>
 
-      <canvas id="gameCanvas" width="600" height="200"></canvas>
+      <canvas id="gameCanvas" width="620" height="220"></canvas>
+
+      <div class="legend">
+        <div class="legend-item"><span class="dot" style="background: #ffd700;"></span> Monedă (+50p)</div>
+        <div class="legend-item"><span class="dot" style="background: #00ff88;"></span> Scut</div>
+        <div class="legend-item"><span class="dot" style="background: #00bfff;"></span> Slow-Mo</div>
+      </div>
 
       <div class="stats">
         <div>Scor Cumulat: <strong id="score-display" style="color: #00fff5;">0</strong> p</div>
@@ -100,10 +140,10 @@
 
       <!-- Secțiune Clasament -->
       <div style="margin-top: 25px; text-align: left;">
-        <h3 style="color: #00fff5; margin-bottom: 10px; text-align: center;">🏆 TOP 10 JUCĂTORI</h3>
-        <table style="width: 100%; border-collapse: collapse; background: #1c1c3c; border-radius: 8px; overflow: hidden;">
+        <h3 style="color: #00fff5; margin-bottom: 10px; text-align: center; font-size: 18px;">🏆 TOP 10 JUCĂTORI</h3>
+        <table style="width: 100%; border-collapse: collapse; background: #161633; border-radius: 8px; overflow: hidden; font-size: 14px;">
           <thead>
-            <tr style="background: #252550; color: #00fff5;">
+            <tr style="background: #202048; color: #00fff5;">
               <th style="padding: 10px; text-align: left;">#</th>
               <th style="padding: 10px; text-align: left;">Jucător</th>
               <th style="padding: 10px; text-align: right;">Scor Total</th>
@@ -174,7 +214,7 @@
             if (index === 2) medal = '🥉 3.';
 
             return `
-              <tr style="border-bottom: 1px solid #282850;">
+              <tr style="border-bottom: 1px solid #222248;">
                 <td style="padding: 10px; font-weight: bold;">${medal}</td>
                 <td style="padding: 10px;">${j.nume_discord}</td>
                 <td style="padding: 10px; text-align: right; color: #00fff5; font-weight: bold;">${j.scor_total} p</td>
@@ -194,27 +234,120 @@
 
     let isPlaying = false;
     let currentScore = 0;
-    let gameSpeed = 4;
+    let gameSpeed = 4.5;
     let gameLoopId;
 
-    const player = { x: 50, y: 145, width: 25, height: 25, dy: 0, gravity: 0.55, jumpPower: -9.5, isGrounded: true };
+    // Player State
+    const player = {
+      x: 60,
+      y: 155,
+      width: 26,
+      height: 26,
+      dy: 0,
+      gravity: 0.58,
+      jumpPower: -9.8,
+      jumpsLeft: 2,
+      hasShield: false,
+      slowMoTimer: 0
+    };
+
     let obstacles = [];
+    let items = [];
+    let particles = [];
+    let playerTrail = [];
     let obstacleTimer = 0;
-    let spawnInterval = 100;
+    let itemTimer = 0;
+
+    function createExplosion(x, y, color, count = 12) {
+      for (let i = 0; i < count; i++) {
+        particles.push({
+          x, y,
+          vx: (Math.random() - 0.5) * 6,
+          vy: (Math.random() - 0.5) * 6,
+          size: Math.random() * 4 + 2,
+          color,
+          life: 25
+        });
+      }
+    }
+
+    function updateParticles() {
+      for (let i = particles.length - 1; i >= 0; i--) {
+        let p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life--;
+        ctx.fillStyle = p.color;
+        ctx.fillRect(p.x, p.y, p.size, p.size);
+        if (p.life <= 0) particles.splice(i, 1);
+      }
+    }
 
     function drawPlayer() {
-      ctx.fillStyle = 'rgba(0, 255, 245, 0.3)';
-      ctx.fillRect(player.x - 8, player.y + 4, player.width, player.height - 4);
+      // Trail
+      playerTrail.push({ x: player.x, y: player.y });
+      if (playerTrail.length > 6) playerTrail.shift();
 
-      ctx.fillStyle = '#00fff5';
+      playerTrail.forEach((t, index) => {
+        ctx.fillStyle = `rgba(0, 255, 245, ${0.08 * (index + 1)})`;
+        ctx.fillRect(t.x, t.y, player.width, player.height);
+      });
+
+      // Shield Aura
+      if (player.hasShield) {
+        ctx.strokeStyle = '#00ff88';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(player.x + 13, player.y + 13, 20, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      // Player Body
+      ctx.fillStyle = player.slowMoTimer > 0 ? '#00bfff' : '#00fff5';
       ctx.fillRect(player.x, player.y, player.width, player.height);
     }
 
-    function drawObstacles() {
-      obstacles.forEach(obs => {
-        ctx.fillStyle = obs.color;
-        ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
-      });
+    function spawnObstacles() {
+      obstacleTimer++;
+      let effectiveSpeed = player.slowMoTimer > 0 ? gameSpeed * 0.6 : gameSpeed;
+      let interval = Math.max(40, 90 - Math.floor(currentScore / 35));
+
+      if (obstacleTimer > interval) {
+        const rand = Math.random();
+        if (rand < 0.4) {
+          // Obstacol Sol Mic
+          obstacles.push({ x: canvas.width, y: 155, width: 20, height: 25, color: '#ff0055', type: 'ground' });
+        } else if (rand < 0.7) {
+          // Obstacol Sol Inalt
+          obstacles.push({ x: canvas.width, y: 140, width: 28, height: 40, color: '#ff5500', type: 'ground_high' });
+        } else {
+          // Drona Aeriana (necesita trecere pe dedesubt sau dubla saritura peste)
+          obstacles.push({ x: canvas.width, y: 95, width: 35, height: 18, color: '#ff00aa', type: 'air' });
+        }
+        obstacleTimer = 0;
+      }
+    }
+
+    function spawnItems() {
+      itemTimer++;
+      if (itemTimer > 180) {
+        const rand = Math.random();
+        let itemType = 'coin';
+        let color = '#ffd700';
+
+        if (rand > 0.7) { itemType = 'shield'; color = '#00ff88'; }
+        else if (rand > 0.45) { itemType = 'slowmo'; color = '#00bfff'; }
+
+        items.push({
+          x: canvas.width,
+          y: Math.random() < 0.5 ? 130 : 85,
+          width: 16,
+          height: 16,
+          type: itemType,
+          color: color
+        });
+        itemTimer = 0;
+      }
     }
 
     function updateGame() {
@@ -222,62 +355,105 @@
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      ctx.strokeStyle = '#222244';
+      // Linia Solului
+      ctx.strokeStyle = '#22224d';
+      ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.moveTo(0, 170);
-      ctx.lineTo(600, 170);
+      ctx.moveTo(0, 180);
+      ctx.lineTo(canvas.width, 180);
       ctx.stroke();
 
+      // Slow Motion Logic
+      if (player.slowMoTimer > 0) player.slowMoTimer--;
+      let currentSpeed = player.slowMoTimer > 0 ? gameSpeed * 0.6 : gameSpeed;
+
+      // Player Physics
       player.dy += player.gravity;
       player.y += player.dy;
 
-      if (player.y >= 145) {
-        player.y = 145;
+      if (player.y >= 154) {
+        player.y = 154;
         player.dy = 0;
-        player.isGrounded = true;
+        player.jumpsLeft = 2;
       }
 
-      gameSpeed = 4 + (currentScore / 80); 
-      spawnInterval = Math.max(45, 100 - Math.floor(currentScore / 40));
+      gameSpeed = 4.5 + (currentScore / 90);
 
-      obstacleTimer++;
-      if (obstacleTimer > spawnInterval) {
-        const types = [
-          { width: 15, height: 25, y: 145, color: '#ff0055' },
-          { width: 25, height: 35, y: 135, color: '#ff5500' },
-          { width: 35, height: 20, y: 150, color: '#ff00aa' }
-        ];
-        const chosen = types[Math.floor(Math.random() * types.length)];
-        obstacles.push({ x: canvas.width, ...chosen });
-        obstacleTimer = 0;
-      }
+      spawnObstacles();
+      spawnItems();
 
-      for (let i = 0; i < obstacles.length; i++) {
-        obstacles[i].x -= gameSpeed;
+      // Obstacole
+      for (let i = obstacles.length - 1; i >= 0; i--) {
+        let obs = obstacles[i];
+        obs.x -= currentSpeed;
 
+        ctx.fillStyle = obs.color;
+        ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+
+        // Coliziune Player - Obstacol
         if (
-          player.x < obstacles[i].x + obstacles[i].width &&
-          player.x + player.width > obstacles[i].x &&
-          player.y < obstacles[i].y + obstacles[i].height &&
-          player.y + player.height > obstacles[i].y
+          player.x < obs.x + obs.width &&
+          player.x + player.width > obs.x &&
+          player.y < obs.y + obs.height &&
+          player.y + player.height > obs.y
         ) {
-          endGame();
-          return;
+          if (player.hasShield) {
+            player.hasShield = false;
+            createExplosion(obs.x, obs.y, '#00ff88', 20);
+            obstacles.splice(i, 1);
+            continue;
+          } else {
+            endGame();
+            return;
+          }
+        }
+
+        if (obs.x < -40) {
+          obstacles.splice(i, 1);
+          currentScore += 10;
         }
       }
 
-      if (obstacles.length > 0 && obstacles[0].x < -40) {
-        obstacles.shift();
-        currentScore += 10;
+      // Item-uri
+      for (let i = items.length - 1; i >= 0; i--) {
+        let item = items[i];
+        item.x -= currentSpeed;
+
+        ctx.fillStyle = item.color;
+        ctx.beginPath();
+        ctx.arc(item.x + 8, item.y + 8, 8, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Colectare Item
+        if (
+          player.x < item.x + item.width &&
+          player.x + player.width > item.x &&
+          player.y < item.y + item.height &&
+          player.y + player.height > item.y
+        ) {
+          createExplosion(item.x, item.y, item.color, 15);
+          if (item.type === 'coin') currentScore += 50;
+          if (item.type === 'shield') player.hasShield = true;
+          if (item.type === 'slowmo') player.slowMoTimer = 200;
+          items.splice(i, 1);
+        } else if (item.x < -20) {
+          items.splice(i, 1);
+        }
       }
 
+      updateParticles();
       drawPlayer();
-      drawObstacles();
 
+      // UI Text
       ctx.fillStyle = '#ffffff';
       ctx.font = '14px Arial';
-      ctx.fillText(`Scor: ${currentScore}`, 10, 20);
-      ctx.fillText(`Viteză: ${gameSpeed.toFixed(1)}x`, 520, 20);
+      ctx.fillText(`Scor: ${currentScore}`, 12, 22);
+      ctx.fillText(`Viteză: ${(currentSpeed).toFixed(1)}x`, 530, 22);
+
+      if (player.slowMoTimer > 0) {
+        ctx.fillStyle = '#00bfff';
+        ctx.fillText(`⏱️ SLOW-MO`, 260, 22);
+      }
 
       gameLoopId = requestAnimationFrame(updateGame);
     }
@@ -287,9 +463,15 @@
       document.getElementById('status-message').innerText = "";
       isPlaying = true;
       currentScore = 0;
-      gameSpeed = 4;
+      gameSpeed = 4.5;
       obstacles = [];
-      player.y = 145;
+      items = [];
+      particles = [];
+      playerTrail = [];
+      player.y = 154;
+      player.hasShield = false;
+      player.slowMoTimer = 0;
+      player.jumpsLeft = 2;
       updateGame();
     }
 
@@ -299,7 +481,7 @@
 
       ctx.fillStyle = '#ff0055';
       ctx.font = 'bold 22px Arial';
-      ctx.fillText(`GAME OVER! Scor obtinut: ${currentScore}`, 140, 90);
+      ctx.fillText(`GAME OVER! Scor: ${currentScore}`, 160, 100);
 
       const statusDiv = document.getElementById('status-message');
       statusDiv.className = "status-msg";
@@ -337,9 +519,10 @@
     function handleJump() {
       if (!isPlaying) {
         startGame();
-      } else if (player.isGrounded) {
+      } else if (player.jumpsLeft > 0) {
         player.dy = player.jumpPower;
-        player.isGrounded = false;
+        player.jumpsLeft--;
+        createExplosion(player.x + 10, player.y + 20, '#00fff5', 6);
       }
     }
 
