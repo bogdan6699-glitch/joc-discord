@@ -102,7 +102,7 @@ app.get('/api/jucator/:id', async (req, res) => {
   res.json({ success: true, jucator });
 });
 
-// Salvare Scor
+// Salvare Scor (Funcționează fără să necesite cheie primară unică în Supabase)
 app.post('/api/salveaza-scor', async (req, res) => {
   const { discord_id, nume_discord, scorObtinut } = req.body;
 
@@ -146,9 +146,27 @@ app.post('/api/salveaza-scor', async (req, res) => {
       saptamana_curenta: saptamana
     };
 
-    const { error: saveError } = await supabase
+    // Verificăm dacă facem INSERT sau UPDATE direct pentru a evita erori de cheie primară
+    const { data: jucatorExistent } = await supabase
       .from('jucatori')
-      .upsert(dateActualizate, { onConflict: 'discord_id' });
+      .select('discord_id')
+      .eq('discord_id', dateActualizate.discord_id)
+      .maybeSingle();
+
+    let saveError;
+
+    if (jucatorExistent) {
+      const { error } = await supabase
+        .from('jucatori')
+        .update(dateActualizate)
+        .eq('discord_id', dateActualizate.discord_id);
+      saveError = error;
+    } else {
+      const { error } = await supabase
+        .from('jucatori')
+        .insert([dateActualizate]);
+      saveError = error;
+    }
 
     if (saveError) {
       console.error("Eroare Supabase:", saveError);
