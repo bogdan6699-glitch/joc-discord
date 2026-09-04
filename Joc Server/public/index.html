@@ -15,6 +15,7 @@
       justify-content: center;
       min-height: 100vh;
       margin: 0;
+      padding: 20px 0;
     }
 
     .container {
@@ -26,6 +27,7 @@
       max-width: 650px;
       width: 100%;
       border: 1px solid #222244;
+      box-sizing: border-box;
     }
 
     h1 {
@@ -95,6 +97,26 @@
       </div>
 
       <div id="status-message" class="status-msg"></div>
+
+      <!-- Secțiune Clasament -->
+      <div style="margin-top: 25px; text-align: left;">
+        <h3 style="color: #00fff5; margin-bottom: 10px; text-align: center;">🏆 TOP 10 JUCĂTORI</h3>
+        <table style="width: 100%; border-collapse: collapse; background: #1c1c3c; border-radius: 8px; overflow: hidden;">
+          <thead>
+            <tr style="background: #252550; color: #00fff5;">
+              <th style="padding: 10px; text-align: left;">#</th>
+              <th style="padding: 10px; text-align: left;">Jucător</th>
+              <th style="padding: 10px; text-align: right;">Scor Total</th>
+            </tr>
+          </thead>
+          <tbody id="leaderboard-body">
+            <tr>
+              <td colspan="3" style="padding: 15px; text-align: center; color: #aaa;">Se încarcă clasamentul...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
     </div>
   </div>
 
@@ -121,6 +143,7 @@
         document.getElementById('game-section').style.display = 'block';
         document.getElementById('username-display').innerText = userDiscordName;
         incarcaStatistici();
+        incarcaLeaderboard();
       }
     }
 
@@ -134,6 +157,35 @@
         }
       } catch (err) {
         console.error("Eroare statistici:", err);
+      }
+    }
+
+    async function incarcaLeaderboard() {
+      try {
+        const res = await fetch('/api/leaderboard');
+        const data = await res.json();
+        const tbody = document.getElementById('leaderboard-body');
+
+        if (data.success && data.leaderboard.length > 0) {
+          tbody.innerHTML = data.leaderboard.map((j, index) => {
+            let medal = `${index + 1}.`;
+            if (index === 0) medal = '🥇 1.';
+            if (index === 1) medal = '🥈 2.';
+            if (index === 2) medal = '🥉 3.';
+
+            return `
+              <tr style="border-bottom: 1px solid #282850;">
+                <td style="padding: 10px; font-weight: bold;">${medal}</td>
+                <td style="padding: 10px;">${j.nume_discord}</td>
+                <td style="padding: 10px; text-align: right; color: #00fff5; font-weight: bold;">${j.scor_total} p</td>
+              </tr>
+            `;
+          }).join('');
+        } else {
+          tbody.innerHTML = '<tr><td colspan="3" style="padding: 15px; text-align: center; color: #aaa;">Niciun scor înregistrat săptămâna aceasta.</td></tr>';
+        }
+      } catch (err) {
+        console.error("Eroare la afișarea clasamentului:", err);
       }
     }
 
@@ -271,6 +323,7 @@
           statusDiv.innerText = "✅ " + data.message;
           document.getElementById('score-display').innerText = data.scor_total;
           document.getElementById('attempts-display').innerText = data.incercari_ramase;
+          incarcaLeaderboard();
         } else {
           statusDiv.className = "status-msg error";
           statusDiv.innerText = "❌ " + data.message;
