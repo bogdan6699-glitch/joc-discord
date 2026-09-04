@@ -299,7 +299,8 @@
         });
       }
     }
-
+    
+let lastFrameTime = performance.now();
     function updateGame() {
       if (!isPlaying) return;
 
@@ -365,11 +366,20 @@
       }
 
       ctx.shadowBlur = 0;
-      gameLoopId = requestAnimationFrame(updateGame);
+     gameLoopId = requestAnimationFrame(function(currentTime) {
+    let elapsed = currentTime - lastFrameTime;
+    if (elapsed > 16.6) {
+      lastFrameTime = currentTime - (elapsed % 16.6);
+      updateGame();
+    } else {
+      gameLoopId = requestAnimationFrame(arguments.callee);
+    }
+  });
     }
 
     function startGame() {
       if (isPlaying) return;
+      lastFrameTime = performance.now();
       document.getElementById('status-message').innerText = "";
       isPlaying = true;
       currentScore = 0;
