@@ -1,15 +1,15 @@
 const express = require('express');
-const { Pool } = require('pg');
+const { createClient } = require('@supabase/supabase-js');
 const path = require('path');
+require('dotenv').config();
 
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Configurare conexiune Bază de Date PostgreSQL
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }
-});
+// Configurare Client Supabase
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_KEY;
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
@@ -23,15 +23,23 @@ app.get('/', (req, res) => {
 app.get('/api/jucator/:discord_id', async (req, res) => {
   try {
     const { discord_id } = req.params;
-    const result = await pool.query('SELECT * FROM jucatori WHERE discord_id = $1', [discord_id]);
-    
-    if (result.rows.length > 0) {
-      res.json({ success: true, jucator: result.rows[0] });
+    const { data, error } = await supabase
+      .from('jucatori')
+      .select('*')
+      .eq('discord_id', discord_id)
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
+      throw error;
+    }
+
+    if (data) {
+      res.json({ success: true, jucator: data });
     } else {
       res.json({ success: true, jucator: { incercari_ramase: 3, scor_total: 0 } });
     }
   } catch (err) {
-    console.error(err);
+    console.error("Eroare jucator:", err);
     res.status(500).json({ success: false, message: 'Eroare la preluarea datelor.' });
   }
 });
@@ -41,17 +49,27 @@ app.post('/api/salveaza-scor', async (req, res) => {
   const { discord_id, nume_discord, scorObtinut } = req.body;
 
   try {
-    let userRes = await pool.query('SELECT * FROM jucatori WHERE discord_id = $1', [discord_id]);
-    
-    if (userRes.rows.length === 0) {
-      await pool.query(
-        'INSERT INTO jucatori (discord_id, nume_discord, scor_total, incercari_ramase) VALUES ($1, $2, $3, $4)',
-        [discord_id, nume_discord, scorObtinut, 2]
-      );
+    const { data: jucator, error: fetchErr } = await supabase
+      .from('jucatori')
+      .select('*')
+      .eq('discord_id', discord_id)
+      .single();
+
+    if (fetchErr && fetchErr.code !== 'PGRST116') throw fetchErr;
+
+    if (!jucator) {
+      // Jucator nou
+      await supabase
+        .from('jucatori')
+        .insert([{
+          discord_id: discord_id,
+          nume_discord: nume_discord,
+          scor_total: scorObtinut,
+          incercari_ramase: 2
+        }]);
+
       return res.json({ success: true, message: 'Scor salvat!', incercari_ramase: 2 });
     }
-
-    const jucator = userRes.rows[0];
 
     if (jucator.incercari_ramase <= 0) {
       return res.json({ success: false, message: 'Nu mai ai încercări rămase săptămâna aceasta!' });
@@ -60,10 +78,14 @@ app.post('/api/salveaza-scor', async (req, res) => {
     const noiIncercari = jucator.incercari_ramase - 1;
     const noulScorTotal = jucator.scor_total + scorObtinut;
 
-    await pool.query(
-      'UPDATE jucatori SET scor_total = $1, incercari_ramase = $2, nume_discord = $3 WHERE discord_id = $4',
-      [noulScorTotal, noiIncercari, nume_discord, discord_id]
-    );
+    await supabase
+      .from('jucatori')
+      .update({
+        scor_total: noulScorTotal,
+        incercari_ramase: noiIncercari,
+        nume_discord: nume_discord
+      })
+      .eq('discord_id', discord_id);
 
     res.json({
       success: true,
@@ -71,7 +93,7 @@ app.post('/api/salveaza-scor', async (req, res) => {
       incercari_ramase: noiIncercari
     });
   } catch (err) {
-    console.error(err);
+    console.error("Eroare salvare scor:", err);
     res.status(500).json({ success: false, message: 'Eroare la salvarea scorului.' });
   }
 });
@@ -79,22 +101,36 @@ app.post('/api/salveaza-scor', async (req, res) => {
 // API: Leaderboard
 app.get('/api/leaderboard', async (req, res) => {
   try {
-    const result = await pool.query('SELECT nume_discord, scor_total FROM jucatori ORDER BY scor_total DESC LIMIT 10');
-    res.json({ success: true, leaderboard: result.rows });
+    const { data, error } = await supabase
+      .from('jucatori')
+      .select('nume_discord, scor_total')
+      .order('scor_total', { ascending: false })
+      .limit(10);
+
+    if (error) throw error;
+
+    res.json({ success: true, leaderboard: data || [] });
   } catch (err) {
-    console.error(err);
+    console.error("Eroare leaderboard:", err);
     res.status(500).json({ success: false, message: 'Eroare la preluarea clasamentului.' });
   }
 });
 
-// RUTA FIXA DE RESETARE ADMIN DIRECT DIN BROWSER
+// RUTA SECRETĂ DE RESETARE ÎNCERCĂRI PENTRU SUPABASE
 app.get('/admin/reset-incercari-reseteaza1123', async (req, res) => {
   try {
-    await pool.query('UPDATE jucatori SET incercari_ramase = 3');
-    res.send('<h1 style="color: #00ff88; font-family: sans-serif; text-align: center; margin-top: 50px; background-color: #080813; padding: 20px;">✅ Încercările au fost resetate cu succes la 3/3 pentru toti jucatorii!</h1>');
+    // Resetează coloana incercari_ramase la 3 pentru TOATE rândurile
+    const { error } = await supabase
+      .from('jucatori')
+      .update({ incercari_ramase: 3 })
+      .neq('discord_id', '0'); // Neq '0' actualizează tot din tabel
+
+    if (error) throw error;
+
+    res.send('<h1 style="color: #00ff88; font-family: sans-serif; text-align: center; margin-top: 50px; background-color: #080813; padding: 20px;">✅ Încercările au fost resetate cu succes la 3/3 în Supabase!</h1>');
   } catch (err) {
-    console.error(err);
-    res.status(500).send('<h1 style="color: #ff4d4d; font-family: sans-serif; text-align: center; margin-top: 50px; background-color: #080813; padding: 20px;">❌ Eroare la resetarea bazei de date!</h1>');
+    console.error("Eroare resetare admin:", err);
+    res.status(500).send('<h1 style="color: #ff4d4d; font-family: sans-serif; text-align: center; margin-top: 50px; background-color: #080813; padding: 20px;">❌ Eroare la resetarea bazei de date! Verifică log-urile.</h1>');
   }
 });
 
