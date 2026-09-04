@@ -48,12 +48,6 @@
       display: inline-block;
       margin-top: 15px;
       box-shadow: 0 4px 18px rgba(88, 101, 242, 0.4);
-      transition: transform 0.2s, background-color 0.2s;
-    }
-
-    .btn-login:hover {
-      background-color: #4752C4;
-      transform: translateY(-2px);
     }
 
     canvas {
@@ -81,6 +75,19 @@
       min-height: 24px;
     }
 
+    .btn-admin {
+      display: none;
+      margin-top: 15px;
+      background: #ff0055;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      box-shadow: 0 0 10px rgba(255, 0, 85, 0.4);
+    }
+
     .error { color: #ff4d4d; }
     .success { color: #00ff88; }
   </style>
@@ -98,7 +105,7 @@
     <div id="game-section" style="display: none;">
       <div style="display: flex; justify-content: space-between; align-items: center; padding: 0 10px;">
         <span style="font-size: 14px;">Jucător: <strong id="username-display" style="color: #00fff5;">-</strong></span>
-        <span style="font-size: 13px; color: #8a8aa8;">Apasă SPACE sau Click pentru a începe</span>
+        <span style="font-size: 13px; color: #8a8aa8;">Apasă SPACE sau Click pentru Start</span>
       </div>
 
       <canvas id="gameCanvas" width="600" height="340"></canvas>
@@ -107,6 +114,11 @@
         <div>Scor Curent: <strong id="current-score-display" style="color: #00fff5;">0</strong> p</div>
         <div>Încercări Săptămână: <strong id="attempts-display" style="color: #ff0055;">3</strong>/3</div>
       </div>
+
+      <!-- Buton Admin Ascuns -->
+      <button id="admin-reset-btn" class="btn-admin" onclick="executaResetAdmin()">
+        ⚡ Reset Încercări Toți Jucătorii (Admin Only)
+      </button>
 
       <div id="status-message" class="status-msg"></div>
 
@@ -133,6 +145,9 @@
   </div>
 
   <script>
+    // Setează ID-ul tău de Discord aici
+    const MY_DISCORD_ID = 'ID_UL_TAU_DE_DISCORD';
+
     let userDiscordId = null;
     let userDiscordName = null;
 
@@ -154,8 +169,36 @@
         document.getElementById('auth-section').style.display = 'none';
         document.getElementById('game-section').style.display = 'block';
         document.getElementById('username-display').innerText = userDiscordName;
+
+        // Activează butonul roșu NUMAI dacă te-ai logat tu
+        if (userDiscordId === MY_DISCORD_ID) {
+          document.getElementById('admin-reset-btn').style.display = 'inline-block';
+        }
+
         incarcaStatistici();
         incarcaLeaderboard();
+      }
+    }
+
+    async function executaResetAdmin() {
+      if (!confirm("Ești sigur că vrei să resetezi încercările la 3/3 pentru toți jucătorii?")) return;
+
+      try {
+        const res = await fetch('/api/admin/reset-incercari', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ admin_discord_id: userDiscordId })
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+          alert("✅ " + data.message);
+          location.reload();
+        } else {
+          alert("❌ " + data.message);
+        }
+      } catch (err) {
+        alert("Eroare la comunicarea cu serverul.");
       }
     }
 
@@ -200,7 +243,6 @@
       }
     }
 
-    // Logică Joc Canvas
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
 
@@ -208,14 +250,7 @@
     let currentScore = 0;
     let gameLoopId;
 
-    const player = {
-      x: 285,
-      y: 290,
-      width: 30,
-      height: 30,
-      speed: 6.5
-    };
-
+    const player = { x: 285, y: 290, width: 30, height: 30, speed: 6.5 };
     let obstacles = [];
     let coins = [];
     let keys = {};
@@ -242,13 +277,8 @@
 
     function spawnElements() {
       timer++;
-      
-      // Crește dificultatea treptat la fiecare 300 cadre (~5 secunde)
-      if (timer % 300 === 0) {
-        difficultyMultiplier += 0.15;
-      }
+      if (timer % 300 === 0) difficultyMultiplier += 0.15;
 
-      // Generare obstacole (frecvență adaptabilă)
       const obstacleFrequency = Math.max(20, Math.floor(45 / difficultyMultiplier));
       if (timer % obstacleFrequency === 0) {
         obstacles.push({
@@ -260,7 +290,6 @@
         });
       }
 
-      // Generare monede bonus
       if (timer % 40 === 0) {
         coins.push({
           x: 15 + Math.random() * (canvas.width - 30),
@@ -276,15 +305,9 @@
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Mișcare Jucător
-      if ((keys['ArrowLeft'] || keys['KeyA']) && player.x > 0) {
-        player.x -= player.speed;
-      }
-      if ((keys['ArrowRight'] || keys['KeyD']) && player.x < canvas.width - player.width) {
-        player.x += player.speed;
-      }
+      if ((keys['ArrowLeft'] || keys['KeyA']) && player.x > 0) player.x -= player.speed;
+      if ((keys['ArrowRight'] || keys['KeyD']) && player.x < canvas.width - player.width) player.x += player.speed;
 
-      // Desenează Jucător cu strălucire (Glow)
       ctx.shadowBlur = 15;
       ctx.shadowColor = '#00fff5';
       ctx.fillStyle = '#00fff5';
@@ -292,7 +315,6 @@
 
       spawnElements();
 
-      // Monede Bonus (+15p)
       ctx.shadowColor = '#ffd700';
       for (let i = coins.length - 1; i >= 0; i--) {
         let c = coins[i];
@@ -303,7 +325,6 @@
         ctx.arc(c.x, c.y, c.radius, 0, Math.PI * 2);
         ctx.fill();
 
-        // Verifică colectarea monedei
         if (
           c.x > player.x - c.radius &&
           c.x < player.x + player.width + c.radius &&
@@ -318,7 +339,6 @@
         }
       }
 
-      // Obstacole
       ctx.shadowColor = '#ff0055';
       for (let i = obstacles.length - 1; i >= 0; i--) {
         let obs = obstacles[i];
@@ -327,7 +347,6 @@
         ctx.fillStyle = '#ff0055';
         ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
 
-        // Verifică coliziunea
         if (
           player.x < obs.x + obs.width &&
           player.x + player.width > obs.x &&
@@ -338,7 +357,6 @@
           return;
         }
 
-        // Puncte acordate pentru trecerea cu succes peste obstacol
         if (obs.y > canvas.height) {
           currentScore += 5;
           document.getElementById('current-score-display').innerText = currentScore;
@@ -346,9 +364,7 @@
         }
       }
 
-      // Resetare umbră pentru performanță
       ctx.shadowBlur = 0;
-
       gameLoopId = requestAnimationFrame(updateGame);
     }
 
