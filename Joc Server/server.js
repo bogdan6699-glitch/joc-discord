@@ -92,7 +92,7 @@ app.post('/api/admin/reset-incercari', async (req, res) => {
   const { admin_discord_id } = req.body;
   
   // Înlocuiește string-ul de mai jos cu ID-ul tău real de Discord
-  const MY_DISCORD_ID = 'ID_UL_TAU_DE_DISCORD';
+  const MY_DISCORD_ID = '1215302644357140482';
 
   if (admin_discord_id !== MY_DISCORD_ID) {
     return res.status(403).json({ success: false, message: 'Acces interzis!' });
