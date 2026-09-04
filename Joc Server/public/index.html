@@ -102,23 +102,25 @@
     let userDiscordId = null;
     let userDiscordName = null;
 
-    async function checkAuth() {
-      try {
-        const res = await fetch('/api/user-curent');
-        const user = await res.json();
+    function initAuth() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const discord_id = urlParams.get('discord_id');
+      const username = urlParams.get('username');
 
-        if (user && user.id) {
-          userDiscordId = user.id;
-          userDiscordName = user.username;
+      if (discord_id && username) {
+        localStorage.setItem('discord_id', discord_id);
+        localStorage.setItem('username', username);
+        window.history.replaceState({}, document.title, "/");
+      }
 
-          document.getElementById('auth-section').style.display = 'none';
-          document.getElementById('game-section').style.display = 'block';
-          document.getElementById('username-display').innerText = userDiscordName;
+      userDiscordId = localStorage.getItem('discord_id');
+      userDiscordName = localStorage.getItem('username');
 
-          incarcaStatistici();
-        }
-      } catch (err) {
-        console.log("Utilizator neconectat.");
+      if (userDiscordId) {
+        document.getElementById('auth-section').style.display = 'none';
+        document.getElementById('game-section').style.display = 'block';
+        document.getElementById('username-display').innerText = userDiscordName;
+        incarcaStatistici();
       }
     }
 
@@ -135,13 +137,12 @@
       }
     }
 
-    // --- MOTORUL JOCULUI NOU & DINAMIC ---
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
 
     let isPlaying = false;
     let currentScore = 0;
-    let gameSpeed = 4; // Începe lent
+    let gameSpeed = 4;
     let gameLoopId;
 
     const player = { x: 50, y: 145, width: 25, height: 25, dy: 0, gravity: 0.55, jumpPower: -9.5, isGrounded: true };
@@ -150,11 +151,9 @@
     let spawnInterval = 100;
 
     function drawPlayer() {
-      // Dâra luminoasă (trail)
       ctx.fillStyle = 'rgba(0, 255, 245, 0.3)';
       ctx.fillRect(player.x - 8, player.y + 4, player.width, player.height - 4);
 
-      // Corp jucător
       ctx.fillStyle = '#00fff5';
       ctx.fillRect(player.x, player.y, player.width, player.height);
     }
@@ -171,14 +170,12 @@
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Linie sol
       ctx.strokeStyle = '#222244';
       ctx.beginPath();
       ctx.moveTo(0, 170);
       ctx.lineTo(600, 170);
       ctx.stroke();
 
-      // Fizică
       player.dy += player.gravity;
       player.y += player.dy;
 
@@ -188,24 +185,21 @@
         player.isGrounded = true;
       }
 
-      // Viteză crescătoare progresiv
       gameSpeed = 4 + (currentScore / 80); 
       spawnInterval = Math.max(45, 100 - Math.floor(currentScore / 40));
 
-      // Generare obstacole variate
       obstacleTimer++;
       if (obstacleTimer > spawnInterval) {
         const types = [
-          { width: 15, height: 25, y: 145, color: '#ff0055' }, // Micul rapid
-          { width: 25, height: 35, y: 135, color: '#ff5500' }, // Înalt
-          { width: 35, height: 20, y: 150, color: '#ff00aa' }  // Blocurile late
+          { width: 15, height: 25, y: 145, color: '#ff0055' },
+          { width: 25, height: 35, y: 135, color: '#ff5500' },
+          { width: 35, height: 20, y: 150, color: '#ff00aa' }
         ];
         const chosen = types[Math.floor(Math.random() * types.length)];
         obstacles.push({ x: canvas.width, ...chosen });
         obstacleTimer = 0;
       }
 
-      // Mișcare și coliziune
       for (let i = 0; i < obstacles.length; i++) {
         obstacles[i].x -= gameSpeed;
 
@@ -220,7 +214,6 @@
         }
       }
 
-      // Scor
       if (obstacles.length > 0 && obstacles[0].x < -40) {
         obstacles.shift();
         currentScore += 10;
@@ -229,7 +222,6 @@
       drawPlayer();
       drawObstacles();
 
-      // Afișare date în timp real
       ctx.fillStyle = '#ffffff';
       ctx.font = '14px Arial';
       ctx.fillText(`Scor: ${currentScore}`, 10, 20);
@@ -306,7 +298,7 @@
     });
 
     canvas.addEventListener('click', handleJump);
-    checkAuth();
+    initAuth();
   </script>
 </body>
 </html>
