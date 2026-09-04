@@ -2,21 +2,18 @@ const express = require('express');
 const axios = require('axios');
 const { createClient } = require('@supabase/supabase-js');
 const path = require('path');
+const fs = require('fs');
 
 const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname)));
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
-});
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Conectare Supabase
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
-// Memorie temporară pentru sesiuni de utilizatori (în producție se folosesc cookie-uri/sessions)
 let activeUsers = {};
 
-// Calcul săptămână curentă (ex: "2026-W36")
 function getSaptamanaCurenta() {
   const d = new Date();
   d.setHours(0, 0, 0, 0);
@@ -26,14 +23,28 @@ function getSaptamanaCurenta() {
   return `${d.getFullYear()}-W${weekNo}`;
 }
 
-// 1. Ruta de Autentificare Discord
+// Ruta principala HTML
+app.get('/', (req, res) => {
+  const rootPath = path.join(__dirname, 'index.html');
+  const publicPath = path.join(__dirname, 'public', 'index.html');
+
+  if (fs.existsSync(rootPath)) {
+    res.sendFile(rootPath);
+  } else if (fs.existsSync(publicPath)) {
+    res.sendFile(publicPath);
+  } else {
+    res.status(404).send("Fișierul index.html nu a fost găsit!");
+  }
+});
+
+// Autentificare Discord
 app.get('/login-discord', (req, res) => {
   const redirectUri = encodeURIComponent(process.env.DISCORD_REDIRECT_URI);
   const url = `https://discord.com/api/oauth2/authorize?client_id=${process.env.DISCORD_CLIENT_ID}&redirect_uri=${redirectUri}&response_type=code&scope=identify`;
   res.redirect(url);
 });
 
-// 2. Callback Discord
+// Callback Discord
 app.get('/auth/discord/callback', async (req, res) => {
   const code = req.query.code;
   if (!code) return res.send("Eroare la autentificare.");
@@ -53,17 +64,15 @@ app.get('/auth/discord/callback', async (req, res) => {
       headers: { Authorization: `Bearer ${tokenResponse.data.access_token}` }
     });
 
-    const user = userResponse.data;
-    activeUsers['current'] = user; // Salvează temporar utilizatorul conectat
-
+    activeUsers['current'] = userResponse.data;
     res.redirect('/');
   } catch (error) {
-    console.error("Eroare OAuth Discord:", error.response ? error.response.data : error.message);
+    console.error("Eroare OAuth:", error.response ? error.response.data : error.message);
     res.send("A apărut o eroare la conectarea cu Discord.");
   }
 });
 
-// 3. Preluare utilizator curent pentru Frontend
+// User Curent
 app.get('/api/user-curent', (req, res) => {
   if (activeUsers['current']) {
     res.json(activeUsers['current']);
@@ -72,7 +81,7 @@ app.get('/api/user-curent', (req, res) => {
   }
 });
 
-// 4. Extragere date jucător din Supabase
+// Date Jucator
 app.get('/api/jucator/:id', async (req, res) => {
   const discord_id = req.params.id;
   const saptamana = getSaptamanaCurenta();
@@ -93,7 +102,7 @@ app.get('/api/jucator/:id', async (req, res) => {
   res.json({ success: true, jucator });
 });
 
-// 5. Salvare Scor în Supabase (Ruta apelată de joc)
+// Salvare Scor
 app.post('/api/salveaza-scor', async (req, res) => {
   const { discord_id, nume_discord, scorObtinut } = req.body;
 
