@@ -1,66 +1,292 @@
 <!DOCTYPE html>
 <html lang="ro">
 <head>
-    <meta charset="UTF-8">
-    <title>Joc Test Discord</title>
-    <style>
-        body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; background: #1e1e2e; color: white; }
-        button { padding: 12px 20px; font-size: 16px; cursor: pointer; border-radius: 5px; border: none; background: #7289da; color: white; }
-        .box { background: #2b2b3b; padding: 20px; display: inline-block; border-radius: 10px; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cyber-Runner Game</title>
+  <style>
+    body {
+      background-color: #121225;
+      color: #ffffff;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+    }
+
+    .container {
+      background: #1a1a3a;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+      text-align: center;
+      max-width: 650px;
+      width: 100%;
+    }
+
+    h1 {
+      color: #00fff5;
+      margin-bottom: 5px;
+    }
+
+    .btn-login {
+      background-color: #5865F2;
+      color: white;
+      padding: 12px 24px;
+      text-decoration: none;
+      font-weight: bold;
+      border-radius: 6px;
+      display: inline-block;
+      margin-top: 15px;
+      transition: 0.2s;
+    }
+
+    .btn-login:hover {
+      background-color: #4752C4;
+    }
+
+    canvas {
+      background: #0f0f1b;
+      border: 2px solid #00fff5;
+      border-radius: 8px;
+      margin-top: 15px;
+      cursor: pointer;
+    }
+
+    .stats {
+      margin-top: 15px;
+      background: #25254d;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+
+    .status-msg {
+      margin-top: 10px;
+      font-weight: bold;
+    }
+
+    .error { color: #ff4d4d; }
+    .success { color: #00ff88; }
+  </style>
 </head>
 <body>
 
-<div class="box">
-    <h1>Joc cu Scor Cumulat (Max 3/Săptămână)</h1>
+  <div class="container">
+    <h1>Cyber-Runner</h1>
+    <p>Conectează-te cu Discord și acumulează cel mai mare scor!</p>
 
-    <div id="sectiune-autentificare">
-        <button onclick="window.location.href='/login-discord'">Conectează-te cu Discord</button>
+    <!-- Secțiune Autentificare -->
+    <div id="auth-section">
+      <a href="/login-discord" class="btn-login">Conectează-te cu Discord</a>
     </div>
 
-    <div id="sectiune-joc" style="display:none;">
-        <h3>Salut, <span id="nume-jucator" style="color: #7289da;"></span>!</h3>
-        <p>Apasă butonul pentru a simula o partidă jucată (ex: obții 100 puncte):</p>
-        <button onclick="joacaAproape()">Joacă o partidă (Obține 100p)</button>
+    <!-- Secțiune Joc (Ascunsă până la login) -->
+    <div id="game-section" style="display: none;">
+      <h3>Salut, <span id="username-display" style="color: #00fff5;">Jucător</span>!</h3>
+      <p style="font-size: 14px; color: #aaa;">Apasă <strong>SPACE</strong> sau <strong>CLICK</strong> pe joc pentru a sări peste obstacole.</p>
 
-        <h4 id="rezultat"></h4>
+      <canvas id="gameCanvas" width="600" height="200"></canvas>
+
+      <div class="stats">
+        <div>Scor Total Cumulat: <strong id="score-display" style="color: #00fff5;">0</strong> puncte</div>
+        <div>Încercări Rămase: <strong id="attempts-display" style="color: #ff0055;">3</strong>/3</div>
+      </div>
+
+      <div id="status-message" class="status-msg"></div>
     </div>
-</div>
+  </div>
 
-<script>
-    // Citim datele din URL trimise după conectarea cu Discord
-    const urlParams = new URLSearchParams(window.location.search);
-    const discordId = urlParams.get('id');
-    const discordUsername = urlParams.get('username');
+  <script>
+    let userDiscordId = null;
+    let userDiscordName = null;
 
-    if (discordId && discordUsername) {
-        document.getElementById('sectiune-autentificare').style.display = 'none';
-        document.getElementById('sectiune-joc').style.display = 'block';
-        document.getElementById('nume-jucator').innerText = discordUsername;
+    // 1. Verificăm dacă utilizatorul este logat
+    async function checkAuth() {
+      try {
+        const res = await fetch('/api/user-curent');
+        const user = await res.json();
+
+        if (user && user.id) {
+          userDiscordId = user.id;
+          userDiscordName = user.username;
+
+          document.getElementById('auth-section').style.display = 'none';
+          document.getElementById('game-section').style.display = 'block';
+          document.getElementById('username-display').innerText = userDiscordName;
+
+          // Încărcăm datele jucătorului
+          incarcaStatistici();
+        }
+      } catch (err) {
+        console.log("Utilizator neconectat.");
+      }
     }
 
-    async function joacaAproape() {
-        // Simulăm obținerea a 100 de puncte într-un joc
-        const raspuns = await fetch('/api/salveaza-scor', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                discord_id: discordId,
-                nume_discord: discordUsername,
-                scorObtinut: 100
-            })
+    // 2. Extrage scorul curent din baza de date
+    async function incarcaStatistici() {
+      try {
+        const res = await fetch(`/api/jucator/${userDiscordId}`);
+        const data = await res.json();
+        if (data.success) {
+          document.getElementById('score-display').innerText = data.jucator.scor_total || 0;
+          document.getElementById('attempts-display').innerText = data.jucator.incercari_ramase ?? 3;
+        }
+      } catch (err) {
+        console.error("Eroare încărcare statistici:", err);
+      }
+    }
+
+    // --- MOTORUL JOCULUI CYBER-RUNNER ---
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    let isPlaying = false;
+    let currentScore = 0;
+    let gameLoopId;
+
+    const player = { x: 50, y: 140, width: 30, height: 30, dy: 0, gravity: 0.6, jumpPower: -10, isGrounded: true };
+    let obstacles = [];
+    let obstacleTimer = 0;
+
+    function drawPlayer() {
+      ctx.fillStyle = '#00fff5';
+      ctx.fillRect(player.x, player.y, player.width, player.height);
+    }
+
+    function drawObstacles() {
+      ctx.fillStyle = '#ff0055';
+      obstacles.forEach(obs => ctx.fillRect(obs.x, obs.y, obs.width, obs.height));
+    }
+
+    function updateGame() {
+      if (!isPlaying) return;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Fizică jucător
+      player.dy += player.gravity;
+      player.y += player.dy;
+
+      if (player.y >= 140) {
+        player.y = 140;
+        player.dy = 0;
+        player.isGrounded = true;
+      }
+
+      // Generare obstacole
+      obstacleTimer++;
+      if (obstacleTimer > 90) {
+        obstacles.push({ x: canvas.width, y: 145, width: 20, height: 25 });
+        obstacleTimer = 0;
+      }
+
+      // Mișcare obstacole & Coliziune
+      for (let i = 0; i < obstacles.length; i++) {
+        obstacles[i].x -= 5;
+
+        if (
+          player.x < obstacles[i].x + obstacles[i].width &&
+          player.x + player.width > obstacles[i].x &&
+          player.y < obstacles[i].y + obstacles[i].height &&
+          player.y + player.height > obstacles[i].y
+        ) {
+          endGame();
+          return;
+        }
+      }
+
+      // Scor & curățare obstacole
+      if (obstacles.length > 0 && obstacles[0].x < -20) {
+        obstacles.shift();
+        currentScore += 10;
+      }
+
+      drawPlayer();
+      drawObstacles();
+
+      // Afișare scor în joc
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '16px Arial';
+      ctx.fillText(`Scor Ründa: ${currentScore}`, 10, 25);
+
+      gameLoopId = requestAnimationFrame(updateGame);
+    }
+
+    function startGame() {
+      if (isPlaying) return;
+      document.getElementById('status-message').innerText = "";
+      isPlaying = true;
+      currentScore = 0;
+      obstacles = [];
+      player.y = 140;
+      updateGame();
+    }
+
+    async function endGame() {
+      isPlaying = false;
+      cancelAnimationFrame(gameLoopId);
+
+      ctx.fillStyle = '#ff0055';
+      ctx.font = '24px Arial';
+      ctx.fillText(`GAME OVER! Scor: ${currentScore}`, 170, 100);
+
+      // Trimitere scor la Server / Supabase
+      const statusDiv = document.getElementById('status-message');
+      statusDiv.innerText = "Se salvează scorul...";
+
+      try {
+        const response = await fetch('/api/salveaza-scor', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            discord_id: userDiscordId,
+            nume_discord: userDiscordName,
+            scorObtinut: currentScore
+          })
         });
 
-        const date = await raspuns.json();
+        const data = await response.json();
 
-        if (date.succes) {
-            document.getElementById('rezultat').innerHTML = 
-                `✅ ${date.mesaj}<br>Scor Total Cumulat: <b>${date.scorTotal}</b><br>Încercări rămase: <b>${date.incercariRamase}/3</b>`;
+        if (data.success) {
+          statusDiv.className = "status-msg success";
+          statusDiv.innerText = "✅ " + data.message;
+          document.getElementById('score-display').innerText = data.scor_total;
+          document.getElementById('attempts-display').innerText = data.incercari_ramase;
         } else {
-            document.getElementById('rezultat').innerHTML = `<span style="color:red;">❌ ${date.mesaj}</span>`;
+          statusDiv.className = "status-msg error";
+          statusDiv.innerText = "❌ " + data.message;
         }
+      } catch (err) {
+        statusDiv.className = "status-msg error";
+        statusDiv.innerText = "❌ Eroare la comunicarea cu serverul!";
+      }
     }
-</script>
 
+    // Controale
+    function handleJump() {
+      if (!isPlaying) {
+        startGame();
+      } else if (player.isGrounded) {
+        player.dy = player.jumpPower;
+        player.isGrounded = false;
+      }
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space') {
+        e.preventDefault();
+        handleJump();
+      }
+    });
+
+    canvas.addEventListener('click', handleJump);
+
+    // Inițializare
+    checkAuth();
+  </script>
 </body>
 </html>
