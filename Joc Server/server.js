@@ -22,6 +22,10 @@ app.get('/', (req, res) => {
 app.get('/login-discord', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
+// Ruta Callback Discord
+app.get('/auth/discord/callback', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
 // API: Preluare date jucător
 app.get('/api/jucator/:discord_id', async (req, res) => {
   try {
