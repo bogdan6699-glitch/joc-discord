@@ -6,7 +6,7 @@
   <title>Neon Dodger</title>
   <style>
     body {
-      background-color: #080813;
+      background-color: #0f0f1b;
       color: #ffffff;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       display: flex;
@@ -15,81 +15,77 @@
       justify-content: center;
       min-height: 100vh;
       margin: 0;
-      padding: 20px 0;
     }
 
     .container {
-      background: #111124;
-      padding: 25px;
-      border-radius: 16px;
-      box-shadow: 0 0 35px rgba(0, 255, 245, 0.15);
       text-align: center;
-      max-width: 680px;
-      width: 100%;
-      border: 1px solid #1e1e42;
-      box-sizing: border-box;
+      background: #1a1a2e;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 0 20px rgba(0, 255, 204, 0.2);
+      max-width: 500px;
+      width: 90%;
     }
 
     h1 {
-      color: #00fff5;
-      margin-bottom: 5px;
-      text-shadow: 0 0 12px rgba(0, 255, 245, 0.6);
-      font-size: 28px;
-      letter-spacing: 2px;
-    }
-
-    .btn-login {
-      background-color: #5865F2;
-      color: white;
-      padding: 14px 28px;
-      text-decoration: none;
-      font-weight: bold;
-      border-radius: 8px;
-      display: inline-block;
-      margin-top: 15px;
-      box-shadow: 0 4px 18px rgba(88, 101, 242, 0.4);
+      margin-top: 0;
+      color: #00ffcc;
+      text-shadow: 0 0 10px rgba(0, 255, 204, 0.5);
     }
 
     canvas {
-      background: #05050d;
-      border: 2px solid #00fff5;
-      border-radius: 10px;
-      margin-top: 15px;
-      box-shadow: 0 0 15px rgba(0, 255, 245, 0.2);
+      border: 2px solid #00ffcc;
+      background-color: #05050a;
+      box-shadow: 0 0 15px rgba(0, 255, 204, 0.3);
+      display: block;
+      margin: 20px auto;
     }
 
-    .stats {
-      margin-top: 15px;
-      background: #181835;
-      padding: 12px;
-      border-radius: 8px;
-      font-size: 15px;
-      display: flex;
-      justify-content: space-around;
-      border: 1px solid #262654;
-    }
-
-    .status-msg {
-      margin-top: 12px;
-      font-weight: bold;
-      min-height: 24px;
-    }
-
-    .btn-admin {
-      display: none;
-      margin-top: 15px;
-      background: #ff0055;
-      color: white;
+    button, .btn-login {
+      background: #00ffcc;
+      color: #0f0f1b;
       border: none;
       padding: 10px 20px;
+      font-size: 16px;
+      font-weight: bold;
       border-radius: 6px;
       cursor: pointer;
-      font-weight: bold;
+      text-decoration: none;
+      display: inline-block;
+      transition: all 0.2s ease-in-out;
+      margin: 5px;
+    }
+
+    button:hover, .btn-login:hover {
+      background: #00cca3;
+      box-shadow: 0 0 10px rgba(0, 255, 204, 0.6);
+    }
+
+    #mute-btn {
+      background: #ff0055;
+      color: #fff;
+    }
+
+    #mute-btn:hover {
+      background: #cc0044;
       box-shadow: 0 0 10px rgba(255, 0, 85, 0.4);
     }
 
-    .error { color: #ff4d4d; }
-    .success { color: #00ff88; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+
+    th, td {
+      padding: 8px;
+      border-bottom: 1px solid #333;
+      text-align: center;
+    }
+
+    th {
+      color: #00ffcc;
+    }
   </style>
 </head>
 <body>
@@ -97,72 +93,63 @@
   <div class="container">
     <h1>NEON DODGER</h1>
     <p style="color: #8a8aa8; margin-top: 0; font-size: 14px;">Folosește SĂGEȚILE (⬅️ / ➡️) sau tastele A / D pentru mișcare.</p>
-<audio id="bg-music" src="bg-music.mp3" loop></audio>
-<button id="mute-btn" onclick="toggleMute()">🔊 Muzică: ON</button>
+    
+    <!-- Audio & Mute -->
+    <audio id="bg-music" src="bg-music.mp3" loop></audio>
+    <button id="mute-btn" onclick="toggleMute()">🔊 Muzică: ON</button>
+
+    <!-- Auth Section -->
     <div id="auth-section">
       <a href="/login-discord" class="btn-login">Conectează-te cu Discord</a>
     </div>
 
+    <!-- Game Section -->
     <div id="game-section" style="display: none;">
-      <div style="display: flex; justify-content: space-between; align-items: center; padding: 0 10px;">
-        <span style="font-size: 14px;">Jucător: <strong id="username-display" style="color: #00fff5;">-</strong></span>
-        <span style="font-size: 13px; color: #8a8aa8;">Apasă SPACE sau Click pentru Start</span>
-      </div>
+      <p>Jucător: <b id="username-display" style="color: #00ffcc;">-</b></p>
+      <canvas id="gameCanvas" width="400" height="500"></canvas>
+      <p>Scor curent: <span id="score">0</span></p>
+      <p id="status-message" style="color: #ff0055; font-weight: bold;"></p>
+      <button onclick="startGame()">Start Joc</button>
 
-      <canvas id="gameCanvas" width="600" height="340"></canvas>
-
-      <div class="stats">
-        <div>Scor Curent: <strong id="current-score-display" style="color: #00fff5;">0</strong> p</div>
-        <div>Încercări Săptămână: <strong id="attempts-display" style="color: #ff0055;">3</strong>/3</div>
-      </div>
-
-      <!-- Buton Admin Ascuns -->
-      <button id="admin-reset-btn" class="btn-admin" onclick="executaResetAdmin()">
-        ⚡ Reset Încercări Toți Jucătorii (Admin Only)
-      </button>
-
-      <div id="status-message" class="status-msg"></div>
-
-      <!-- Clasament -->
-      <div style="margin-top: 25px; text-align: left;">
-        <h3 style="color: #00fff5; margin-bottom: 10px; text-align: center; font-size: 18px;">🏆 TOP 10 JUCĂTORI</h3>
-        <table style="width: 100%; border-collapse: collapse; background: #161633; border-radius: 8px; overflow: hidden; font-size: 14px;">
-          <thead>
-            <tr style="background: #202048; color: #00fff5;">
-              <th style="padding: 10px; text-align: left;">#</th>
-              <th style="padding: 10px; text-align: left;">Jucător</th>
-              <th style="padding: 10px; text-align: right;">Scor Total</th>
-            </tr>
-          </thead>
-          <tbody id="leaderboard-body">
-            <tr>
-              <td colspan="3" style="padding: 15px; text-align: center; color: #aaa;">Se încarcă clasamentul...</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
+      <!-- Leaderboard Section -->
+      <h3 style="color: #00ffcc; margin-top: 25px;">Top Jucători</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Loc</th>
+            <th>Nume</th>
+            <th>Scor Max</th>
+          </tr>
+        </thead>
+        <tbody id="leaderboard-body">
+          <tr><td colspan="3">Se încarcă clasamentul...</td></tr>
+        </tbody>
+      </table>
     </div>
   </div>
 
   <script>
-    // Setează ID-ul tău de Discord aici
     const MY_DISCORD_ID = '1215302644357140482';
-const bgMusic = document.getElementById('bg-music');
-const muteBtn = document.getElementById('mute-btn');
 
-if (bgMusic) {
-  bgMusic.volume = 0.2;
-}
+    // Setări Audio
+    const bgMusic = document.getElementById('bg-music');
+    const muteBtn = document.getElementById('mute-btn');
 
-function toggleMute() {
-  if (bgMusic.muted) {
-    bgMusic.muted = false;
-    muteBtn.innerText = "🔊 Muzică: ON";
-  } else {
-    bgMusic.muted = true;
-    muteBtn.innerText = "🔇 Muzică: OFF";
-  }
+    if (bgMusic) {
+      bgMusic.volume = 0.2;
+    }
+
+    function toggleMute() {
+      if (bgMusic.muted) {
+        bgMusic.muted = false;
+        muteBtn.innerText = "🔊 Muzică: ON";
+      } else {
+        bgMusic.muted = true;
+        muteBtn.innerText = "🔇 Muzică: OFF";
+      }
+    }
+
+    // Auth Discord
     let userDiscordId = null;
     let userDiscordName = null;
 
@@ -183,279 +170,162 @@ function toggleMute() {
       if (userDiscordId) {
         document.getElementById('auth-section').style.display = 'none';
         document.getElementById('game-section').style.display = 'block';
-        document.getElementById('username-display').innerText = userDiscordName;
-
-        // Activează butonul roșu NUMAI dacă te-ai logat tu
-        if (userDiscordId === MY_DISCORD_ID) {
-          document.getElementById('admin-reset-btn').style.display = 'inline-block';
-        }
-
-        incarcaStatistici();
-        incarcaLeaderboard();
+        document.getElementById('username-display').innerText = userDiscordName || 'Jucător';
+        loadLeaderboard();
       }
     }
 
-    async function executaResetAdmin() {
-      if (!confirm("Ești sigur că vrei să resetezi încercările la 3/3 pentru toți jucătorii?")) return;
-
-      try {
-        const res = await fetch('/api/admin/reset-incercari', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ admin_discord_id: userDiscordId })
-        });
-        const data = await res.json();
-        
-        if (data.success) {
-          alert("✅ " + data.message);
-          location.reload();
-        } else {
-          alert("❌ " + data.message);
-        }
-      } catch (err) {
-        alert("Eroare la comunicarea cu serverul.");
-      }
-    }
-
-    async function incarcaStatistici() {
-      try {
-        const res = await fetch(`/api/jucator/${userDiscordId}`);
-        const data = await res.json();
-        if (data.success) {
-          document.getElementById('attempts-display').innerText = data.jucator.incercari_ramase ?? 3;
-        }
-      } catch (err) {
-        console.error("Eroare statistici:", err);
-      }
-    }
-
-    async function incarcaLeaderboard() {
+    // Încărcare Leaderboard din Server
+    async function loadLeaderboard() {
       try {
         const res = await fetch('/api/leaderboard');
+        if (!res.ok) return;
         const data = await res.json();
+        
         const tbody = document.getElementById('leaderboard-body');
+        tbody.innerHTML = '';
 
-        if (data.success && data.leaderboard.length > 0) {
-          tbody.innerHTML = data.leaderboard.map((j, index) => {
-            let medal = `${index + 1}.`;
-            if (index === 0) medal = '🥇 1.';
-            if (index === 1) medal = '🥈 2.';
-            if (index === 2) medal = '🥉 3.';
-
-            return `
-              <tr style="border-bottom: 1px solid #222248;">
-                <td style="padding: 10px; font-weight: bold;">${medal}</td>
-                <td style="padding: 10px;">${j.nume_discord}</td>
-                <td style="padding: 10px; text-align: right; color: #00fff5; font-weight: bold;">${j.scor_total} p</td>
-              </tr>
-            `;
-          }).join('');
-        } else {
-          tbody.innerHTML = '<tr><td colspan="3" style="padding: 15px; text-align: center; color: #aaa;">Niciun scor înregistrat săptămâna aceasta.</td></tr>';
-        }
-      } catch (err) {
-        console.error("Eroare la afișarea clasamentului:", err);
-      }
-    }
-
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
-
-    let isPlaying = false;
-    let currentScore = 0;
-    let gameLoopId;
-
-    const player = { x: 285, y: 290, width: 30, height: 30, speed: 6.5 };
-    let obstacles = [];
-    let coins = [];
-    let keys = {};
-    let timer = 0;
-    let difficultyMultiplier = 1;
-
-    window.addEventListener('keydown', (e) => {
-      keys[e.code] = true;
-      if (!isPlaying && (e.code === 'Space' || e.code === 'ArrowLeft' || e.code === 'ArrowRight')) {
-        startGame();
-      }
-    });
-
-    window.addEventListener('keyup', (e) => { keys[e.code] = false; });
-    canvas.addEventListener('click', () => { if (!isPlaying) startGame(); });
-
-    function drawStartScreen() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = '#00fff5';
-      ctx.font = 'bold 20px Segoe UI, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('Apasă SPACE sau Click pentru a juca!', canvas.width / 2, canvas.height / 2);
-    }
-
-    function spawnElements() {
-      timer++;
-      if (timer % 300 === 0) difficultyMultiplier += 0.15;
-
-      const obstacleFrequency = Math.max(20, Math.floor(45 / difficultyMultiplier));
-      if (timer % obstacleFrequency === 0) {
-        obstacles.push({
-          x: Math.random() * (canvas.width - 30),
-          y: -25,
-          width: 30 + Math.random() * 15,
-          height: 18,
-          speed: (2.2 + Math.random() * 1.5) * difficultyMultiplier
-        });
-      }
-
-      if (timer % 40 === 0) {
-        coins.push({
-          x: 15 + Math.random() * (canvas.width - 30),
-          y: -20,
-          radius: 8,
-          speed: 2.5
-        });
-      }
-    }
-    
-let lastFrameTime = performance.now();
-    function updateGame() {
-      if (!isPlaying) return;
-
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      if ((keys['ArrowLeft'] || keys['KeyA']) && player.x > 0) player.x -= player.speed;
-      if ((keys['ArrowRight'] || keys['KeyD']) && player.x < canvas.width - player.width) player.x += player.speed;
-
-      ctx.shadowBlur = 15;
-      ctx.shadowColor = '#00fff5';
-      ctx.fillStyle = '#00fff5';
-      ctx.fillRect(player.x, player.y, player.width, player.height);
-
-      spawnElements();
-
-      ctx.shadowColor = '#ffd700';
-      for (let i = coins.length - 1; i >= 0; i--) {
-        let c = coins[i];
-        c.y += c.speed;
-
-        ctx.fillStyle = '#ffd700';
-        ctx.beginPath();
-        ctx.arc(c.x, c.y, c.radius, 0, Math.PI * 2);
-        ctx.fill();
-
-        if (
-          c.x > player.x - c.radius &&
-          c.x < player.x + player.width + c.radius &&
-          c.y > player.y - c.radius &&
-          c.y < player.y + player.height + c.radius
-        ) {
-          currentScore += 15;
-          document.getElementById('current-score-display').innerText = currentScore;
-          coins.splice(i, 1);
-        } else if (c.y > canvas.height + 10) {
-          coins.splice(i, 1);
-        }
-      }
-
-      ctx.shadowColor = '#ff0055';
-      for (let i = obstacles.length - 1; i >= 0; i--) {
-        let obs = obstacles[i];
-        obs.y += obs.speed;
-
-        ctx.fillStyle = '#ff0055';
-        ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
-
-        if (
-          player.x < obs.x + obs.width &&
-          player.x + player.width > obs.x &&
-          player.y < obs.y + obs.height &&
-          player.y + player.height > obs.y
-        ) {
-          endGame();
+        if (data.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="3">Niciun scor înregistrat.</td></tr>';
           return;
         }
 
-        if (obs.y > canvas.height) {
-          currentScore += 5;
-          document.getElementById('current-score-display').innerText = currentScore;
-          obstacles.splice(i, 1);
-        }
+        data.forEach((player, index) => {
+          const row = `<tr>
+            <td>${index + 1}</td>
+            <td>${player.username || 'Anonim'}</td>
+            <td>${player.high_score || 0}</td>
+          </tr>`;
+          tbody.innerHTML += row;
+        });
+      } catch (err) {
+        console.log("Eroare la încărcarea clasamentului:", err);
       }
+    }
 
-      ctx.shadowBlur = 0;
-     gameLoopId = requestAnimationFrame(function(currentTime) {
-    let elapsed = currentTime - lastFrameTime;
-    if (elapsed > 16.6) {
-      lastFrameTime = currentTime - (elapsed % 16.6);
-      updateGame();
-    } else {
-      gameLoopId = requestAnimationFrame(arguments.callee);
+    // Salvare Scor
+    async function saveScore(score) {
+      if (!userDiscordId) return;
+      try {
+        await fetch('/api/salveaza-scor', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ discord_id: userDiscordId, score: score })
+        });
+        loadLeaderboard();
+      } catch (e) {
+        console.log("Eroare la salvarea scorului.");
+      }
     }
-  });
-    }
+
+    // Logica Jocului (Canvas + 60 FPS)
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas ? canvas.getContext('2d') : null;
+
+    let isPlaying = false;
+    let currentScore = 0;
+    let lastFrameTime = performance.now();
+    const TARGET_FPS = 60;
+    const FRAME_DURATION = 1000 / TARGET_FPS;
+
+    let player = { x: 180, y: 440, width: 40, height: 40, speed: 5 };
+    let obstacles = [];
+    let keys = {};
+
+    window.addEventListener('keydown', e => keys[e.key] = true);
+    window.addEventListener('keyup', e => keys[e.key] = false);
 
     function startGame() {
       if (bgMusic) {
-  bgMusic.play().catch(e => console.log("Autoplay blocat de browser."));
-    }
+        bgMusic.play().catch(e => console.log("Autoplay blocat de browser."));
+      }
+
       if (isPlaying) return;
+
       lastFrameTime = performance.now();
       document.getElementById('status-message').innerText = "";
       isPlaying = true;
       currentScore = 0;
-      timer = 0;
-      difficultyMultiplier = 1;
+      document.getElementById('score').innerText = currentScore;
       obstacles = [];
-      coins = [];
-      player.x = canvas.width / 2 - player.width / 2;
-      document.getElementById('current-score-display').innerText = '0';
-      updateGame();
+      player.x = 180;
+
+      gameLoop(performance.now());
     }
 
-    async function endGame() {
-      isPlaying = false;
-      cancelAnimationFrame(gameLoopId);
+    function gameLoop(now) {
+      if (!isPlaying) return;
 
-      ctx.shadowBlur = 10;
-      ctx.shadowColor = '#ff0055';
-      ctx.fillStyle = '#ff0055';
-      ctx.font = 'bold 26px Segoe UI, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(`GAME OVER! Scor: ${currentScore}`, canvas.width / 2, canvas.height / 2);
-      ctx.shadowBlur = 0;
+      const elapsed = now - lastFrameTime;
 
-      const statusDiv = document.getElementById('status-message');
-      statusDiv.className = "status-msg";
-      statusDiv.innerText = "Se salvează scorul...";
+      if (elapsed >= FRAME_DURATION) {
+        lastFrameTime = now - (elapsed % FRAME_DURATION);
+        update();
+        draw();
+      }
 
-      try {
-        const response = await fetch('/api/salveaza-scor', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            discord_id: userDiscordId,
-            nume_discord: userDiscordName,
-            scorObtinut: currentScore
-          })
+      requestAnimationFrame(gameLoop);
+    }
+
+    function update() {
+      if (keys['ArrowLeft'] || keys['a'] || keys['A']) {
+        if (player.x > 0) player.x -= player.speed;
+      }
+      if (keys['ArrowRight'] || keys['d'] || keys['D']) {
+        if (player.x < canvas.width - player.width) player.x += player.speed;
+      }
+
+      if (Math.random() < 0.03) {
+        obstacles.push({
+          x: Math.random() * (canvas.width - 30),
+          y: -30,
+          width: 30,
+          height: 30,
+          speed: 3 + Math.random() * 2
         });
+      }
 
-        const data = await response.json();
+      for (let i = 0; i < obstacles.length; i++) {
+        obstacles[i].y += obstacles[i].speed;
 
-        if (data.success) {
-          statusDiv.className = "status-msg success";
-          statusDiv.innerText = "✅ " + data.message;
-          document.getElementById('attempts-display').innerText = data.incercari_ramase;
-          incarcaLeaderboard();
-        } else {
-          statusDiv.className = "status-msg error";
-          statusDiv.innerText = "❌ " + data.message;
+        if (
+          player.x < obstacles[i].x + obstacles[i].width &&
+          player.x + player.width > obstacles[i].x &&
+          player.y < obstacles[i].y + obstacles[i].height &&
+          player.y + player.height > obstacles[i].y
+        ) {
+          gameOver();
+          return;
         }
-      } catch (err) {
-        statusDiv.className = "status-msg error";
-        statusDiv.innerText = "❌ Eroare la comunicarea cu serverul!";
+
+        if (obstacles[i].y > canvas.height) {
+          obstacles.splice(i, 1);
+          i--;
+          currentScore += 10;
+          document.getElementById('score').innerText = currentScore;
+        }
       }
     }
 
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = '#00ffcc';
+      ctx.fillRect(player.x, player.y, player.width, player.height);
+
+      ctx.fillStyle = '#ff0055';
+      for (let obs of obstacles) {
+        ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+      }
+    }
+
+    function gameOver() {
+      isPlaying = false;
+      document.getElementById('status-message').innerText = "GAME OVER! Apasă 'Start Joc' pentru a reîncerca.";
+      saveScore(currentScore);
+    }
+
     initAuth();
-    drawStartScreen();
   </script>
 </body>
 </html>
