@@ -299,75 +299,84 @@
         });
       }
     }
+let lastFrameTime = performance.now();
 
-    function updateGame() {
-      if (!isPlaying) return;
+function updateGame(now) {
+  if (!isPlaying) return;
 
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const elapsed = now - lastFrameTime;
 
-      if ((keys['ArrowLeft'] || keys['KeyA']) && player.x > 0) player.x -= player.speed;
-      if ((keys['ArrowRight'] || keys['KeyD']) && player.x < canvas.width - player.width) player.x += player.speed;
+  if (elapsed >= 16.6) {
+    lastFrameTime = now - (elapsed % 16.6);
 
-      ctx.shadowBlur = 15;
-      ctx.shadowColor = '#00fff5';
-      ctx.fillStyle = '#00fff5';
-      ctx.fillRect(player.x, player.y, player.width, player.height);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      spawnElements();
+    if ((keys['ArrowLeft'] || keys['KeyA']) && player.x > 0) player.x -= player.speed;
+    if ((keys['ArrowRight'] || keys['KeyD']) && player.x < canvas.width - player.width) player.x += player.speed;
 
-      ctx.shadowColor = '#ffd700';
-      for (let i = coins.length - 1; i >= 0; i--) {
-        let c = coins[i];
-        c.y += c.speed;
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = '#00fff5';
+    ctx.fillStyle = '#00fff5';
+    ctx.fillRect(player.x, player.y, player.width, player.height);
 
-        ctx.fillStyle = '#ffd700';
-        ctx.beginPath();
-        ctx.arc(c.x, c.y, c.radius, 0, Math.PI * 2);
-        ctx.fill();
+    spawnElements();
 
-        if (
-          c.x > player.x - c.radius &&
-          c.x < player.x + player.width + c.radius &&
-          c.y > player.y - c.radius &&
-          c.y < player.y + player.height + c.radius
-        ) {
-          currentScore += 15;
-          document.getElementById('current-score-display').innerText = currentScore;
-          coins.splice(i, 1);
-        } else if (c.y > canvas.height + 10) {
-          coins.splice(i, 1);
-        }
+    // Monede
+    ctx.shadowColor = '#ffd700';
+    for (let i = coins.length - 1; i >= 0; i--) {
+      let c = coins[i];
+      c.y += c.speed;
+
+      ctx.fillStyle = '#ffd700';
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, c.radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      if (
+        c.x > player.x - c.radius &&
+        c.x < player.x + player.width + c.radius &&
+        c.y > player.y - c.radius &&
+        c.y < player.y + player.height + c.radius
+      ) {
+        currentScore += 15;
+        document.getElementById('current-score-display').innerText = currentScore;
+        coins.splice(i, 1);
+      } else if (c.y > canvas.height + 10) {
+        coins.splice(i, 1);
       }
-
-      ctx.shadowColor = '#ff0055';
-      for (let i = obstacles.length - 1; i >= 0; i--) {
-        let obs = obstacles[i];
-        obs.y += obs.speed;
-
-        ctx.fillStyle = '#ff0055';
-        ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
-
-        if (
-          player.x < obs.x + obs.width &&
-          player.x + player.width > obs.x &&
-          player.y < obs.y + obs.height &&
-          player.y + player.height > obs.y
-        ) {
-          endGame();
-          return;
-        }
-
-        if (obs.y > canvas.height) {
-          currentScore += 5;
-          document.getElementById('current-score-display').innerText = currentScore;
-          obstacles.splice(i, 1);
-        }
-      }
-
-      ctx.shadowBlur = 0;
-      gameLoopId = requestAnimationFrame(updateGame);
     }
 
+    // Obstacole
+    ctx.shadowColor = '#ff0055';
+    for (let i = obstacles.length - 1; i >= 0; i--) {
+      let obs = obstacles[i];
+      obs.y += obs.speed;
+
+      ctx.fillStyle = '#ff0055';
+      ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+
+      if (
+        player.x < obs.x + obs.width &&
+        player.x + player.width > obs.x &&
+        player.y < obs.y + obs.height &&
+        player.y + player.height > obs.y
+      ) {
+        endGame();
+        return;
+      }
+
+      if (obs.y > canvas.height) {
+        currentScore += 5;
+        document.getElementById('current-score-display').innerText = currentScore;
+        obstacles.splice(i, 1);
+      }
+    }
+
+    ctx.shadowBlur = 0;
+  }
+
+  gameLoopId = requestAnimationFrame(updateGame);
+}
     function startGame() {
       if (isPlaying) return;
       document.getElementById('status-message').innerText = "";
@@ -379,7 +388,7 @@
       coins = [];
       player.x = canvas.width / 2 - player.width / 2;
       document.getElementById('current-score-display').innerText = '0';
-      updateGame();
+      updateGame(performance.now());
     }
 
     async function endGame() {
