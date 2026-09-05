@@ -124,8 +124,8 @@
       <p id="status-message" style="color: #ff0055; font-weight: bold;"></p>
       <button onclick="startGame()">Start Joc</button>
 
-      <!-- Leaderboard Section for Discord Server -->
-      <h3 style="color: #00ffcc; margin-top: 25px;">Top Server Discord</h3>
+      <!-- Scoreboard Section -->
+      <h3 style="color: #00ffcc; margin-top: 25px;">Top Jucători</h3>
       <table>
         <thead>
           <tr>
@@ -142,8 +142,6 @@
   </div>
 
   <script>
-    const MY_DISCORD_ID = '1215302644357140482';
-
     // Setări Audio
     const bgMusic = document.getElementById('bg-music');
     const muteBtn = document.getElementById('mute-btn');
@@ -188,18 +186,18 @@
       }
     }
 
-    // Încărcare Leaderboard dedicat Serverului Discord
+    // Încărcare Scoreboard din backend
     async function loadLeaderboard() {
       try {
-        const res = await fetch(`/api/leaderboard?server_id=${MY_DISCORD_ID}`);
+        const res = await fetch('/api/leaderboard');
         if (!res.ok) return;
         const data = await res.json();
         
         const tbody = document.getElementById('leaderboard-body');
         tbody.innerHTML = '';
 
-        if (data.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="3">Niciun scor pe acest server.</td></tr>';
+        if (!data || data.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="3">Niciun scor înregistrat.</td></tr>';
           return;
         }
 
@@ -207,7 +205,7 @@
           const row = `<tr>
             <td>${index + 1}</td>
             <td>${player.username || 'Anonim'}</td>
-            <td>${player.high_score || 0}</td>
+            <td>${player.high_score || player.score || 0}</td>
           </tr>`;
           tbody.innerHTML += row;
         });
@@ -216,22 +214,28 @@
       }
     }
 
-    // Salvare Scor cu referință la Serverul Discord
+    // Salvare Scor Curată (Compatibilă cu backend-ul tău)
     async function saveScore(score) {
       if (!userDiscordId) return;
       try {
-        await fetch('/api/salveaza-scor', {
+        console.log("Se trimite scorul:", score, "pentru user:", userDiscordId);
+        const res = await fetch('/api/salveaza-scor', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
             discord_id: userDiscordId, 
-            server_id: MY_DISCORD_ID,
             score: score 
           })
         });
-        loadLeaderboard();
+
+        if (res.ok) {
+          console.log("Scor salvat cu succes!");
+          loadLeaderboard(); // Reîncarcă tabela imediat
+        } else {
+          console.log("Eroare la salvare de la server:", res.status);
+        }
       } catch (e) {
-        console.log("Eroare la salvarea scorului.");
+        console.log("Eroare rețea la salvarea scorului:", e);
       }
     }
 
@@ -242,7 +246,7 @@
     let isPlaying = false;
     let currentScore = 0;
     let lives = 3;
-    let invulnerableTimer = 0; // Invulnerabilitate după lovitură
+    let invulnerableTimer = 0;
     let lastFrameTime = performance.now();
     const TARGET_FPS = 60;
     const FRAME_DURATION = 1000 / TARGET_FPS;
@@ -300,7 +304,6 @@
     }
 
     function update() {
-      // Mișcare jucător
       if (keys['ArrowLeft'] || keys['a'] || keys['A']) {
         if (player.x > 0) player.x -= player.speed;
       }
@@ -308,12 +311,10 @@
         if (player.x < canvas.width - player.width) player.x += player.speed;
       }
 
-      // Temporizator Invulnerabilitate (după ce pierzi o viață)
       if (invulnerableTimer > 0) {
         invulnerableTimer--;
       }
 
-      // Expirare Scut Power-up
       if (player.hasShield) {
         player.shieldTimer--;
         if (player.shieldTimer <= 0) {
@@ -323,7 +324,6 @@
 
       const difficultyMultiplier = 1 + Math.floor(currentScore / 100) * 0.2;
 
-      // Generare Obstacole
       if (Math.random() < 0.03 * difficultyMultiplier) {
         obstacles.push({
           x: Math.random() * (canvas.width - 30),
@@ -334,7 +334,6 @@
         });
       }
 
-      // Generare Power-up Shield (Cerc galben)
       if (Math.random() < 0.003) {
         powerups.push({
           x: Math.random() * (canvas.width - 20),
@@ -344,7 +343,6 @@
         });
       }
 
-      // Colectare Power-ups
       for (let i = 0; i < powerups.length; i++) {
         powerups[i].y += powerups[i].speed;
 
@@ -356,7 +354,7 @@
           player.y + player.height > p.y - p.radius
         ) {
           player.hasShield = true;
-          player.shieldTimer = 300; // ~5 sec
+          player.shieldTimer = 300;
           powerups.splice(i, 1);
           i--;
           continue;
@@ -368,7 +366,6 @@
         }
       }
 
-      // Update & Coliziuni Obstacole
       for (let i = 0; i < obstacles.length; i++) {
         obstacles[i].y += obstacles[i].speed;
 
@@ -378,7 +375,6 @@
           player.y < obstacles[i].y + obstacles[i].height &&
           player.y + player.height > obstacles[i].y
         ) {
-          // Protecție Scut
           if (player.hasShield) {
             player.hasShield = false;
             obstacles.splice(i, 1);
@@ -386,11 +382,10 @@
             continue;
           } 
           
-          // Scădere Viață dacă nu e invulnerabil
           if (invulnerableTimer === 0) {
             lives--;
             updateLivesDisplay();
-            invulnerableTimer = 60; // 1 secundă de invulnerabilitate (60 frame-uri)
+            invulnerableTimer = 60;
             
             obstacles.splice(i, 1);
             i--;
@@ -415,27 +410,22 @@
     function draw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Effect de pâlpâire când e invulnerabil
       if (invulnerableTimer % 10 < 5) {
-        // Scut galben
         if (player.hasShield) {
           ctx.strokeStyle = '#ffff00';
           ctx.lineWidth = 4;
           ctx.strokeRect(player.x - 4, player.y - 4, player.width + 8, player.height + 8);
         }
 
-        // Jucător Neon
         ctx.fillStyle = '#00ffcc';
         ctx.fillRect(player.x, player.y, player.width, player.height);
       }
 
-      // Obstacole
       ctx.fillStyle = '#ff0055';
       for (let obs of obstacles) {
         ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
       }
 
-      // Power-ups
       ctx.fillStyle = '#ffff00';
       for (let p of powerups) {
         ctx.beginPath();
