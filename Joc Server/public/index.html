@@ -392,7 +392,13 @@
 
       if (isPlaying) return;
       document.getElementById('status-message').innerText = "";
-
+// AICI SETĂM MUZICA ȘI VOLUMUL (0.15 înseamnă 15% volum)
+  const bgMusic = document.getElementById('bg-music');
+  if (bgMusic) {
+    bgMusic.volume = 0.15; 
+    bgMusic.currentTime = 0;
+    bgMusic.play().catch(() => {});
+  }
       // Pornire Muzică
       const bgMusic = document.getElementById('bg-music');
       if (bgMusic) {
