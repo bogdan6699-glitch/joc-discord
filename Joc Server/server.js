@@ -16,15 +16,17 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // Ruta principala
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
+
 // Ruta OAuth Discord
 app.get('/login-discord', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
+
 // Ruta Callback Discord
 app.get('/auth/discord/callback', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 // API: Preluare date jucător
 app.get('/api/jucator/:discord_id', async (req, res) => {
