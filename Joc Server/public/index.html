@@ -148,7 +148,21 @@
   <script>
     // Setează ID-ul tău de Discord aici
     const MY_DISCORD_ID = '1215302644357140482';
+const bgMusic = document.getElementById('bg-music');
+const muteBtn = document.getElementById('mute-btn');
 
+if (bgMusic) {
+  bgMusic.volume = 0.2;
+}
+
+function toggleMute() {
+  if (bgMusic.muted) {
+    bgMusic.muted = false;
+    muteBtn.innerText = "🔊 Muzică: ON";
+  } else {
+    bgMusic.muted = true;
+    muteBtn.innerText = "🔇 Muzică: OFF";
+  }
     let userDiscordId = null;
     let userDiscordName = null;
 
@@ -379,6 +393,9 @@ let lastFrameTime = performance.now();
     }
 
     function startGame() {
+      if (bgMusic) {
+  bgMusic.play().catch(e => console.log("Autoplay blocat de browser."));
+    }
       if (isPlaying) return;
       lastFrameTime = performance.now();
       document.getElementById('status-message').innerText = "";
