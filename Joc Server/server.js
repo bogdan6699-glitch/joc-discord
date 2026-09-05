@@ -19,15 +19,17 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Ruta OAuth Discord
+// Ruta OAuth Discord - Redirecționează direct către Discord Login
 app.get('/login-discord', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  const discordAuthUrl = 'https://discord.com/oauth2/authorize?client_id=1545525738902392952&redirect_uri=https%3A%2F%2Fjoc-discord.onrender.com%2Fauth%2Fdiscord%2Fcallback&response_type=code&scope=identify';
+  res.redirect(discordAuthUrl);
 });
 
 // Ruta Callback Discord
 app.get('/auth/discord/callback', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
+
 // API: Preluare date jucător
 app.get('/api/jucator/:discord_id', async (req, res) => {
   try {
@@ -128,11 +130,10 @@ app.get('/api/leaderboard', async (req, res) => {
 // RUTA SECRETĂ DE RESETARE ÎNCERCĂRI PENTRU SUPABASE
 app.get('/admin/reset-incercari-reseteaza1123', async (req, res) => {
   try {
-    // Resetează coloana incercari_ramase la 3 pentru TOATE rândurile
     const { error } = await supabase
       .from('jucatori')
       .update({ incercari_ramase: 3 })
-      .neq('discord_id', '0'); // Neq '0' actualizează tot din tabel
+      .neq('discord_id', '0');
 
     if (error) throw error;
 
@@ -141,6 +142,11 @@ app.get('/admin/reset-incercari-reseteaza1123', async (req, res) => {
     console.error("Eroare resetare admin:", err);
     res.status(500).send('<h1 style="color: #ff4d4d; font-family: sans-serif; text-align: center; margin-top: 50px; background-color: #080813; padding: 20px;">❌ Eroare la resetarea bazei de date! Verifică log-urile.</h1>');
   }
+});
+
+// Catch-All: Orice altă adresă necunoscută trimite tot pe index.html
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 app.listen(port, () => {
