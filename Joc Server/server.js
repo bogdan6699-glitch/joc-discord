@@ -18,7 +18,10 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
-
+// Ruta OAuth Discord
+app.get('/login-discord', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
 // API: Preluare date jucător
 app.get('/api/jucator/:discord_id', async (req, res) => {
   try {
